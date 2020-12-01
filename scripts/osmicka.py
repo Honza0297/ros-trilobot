@@ -28,22 +28,12 @@ def sonar_getter():
 class Demo_Controller:
     def __init__(self):
         rospy.loginfo("Demo controller initialisation")
-        self.continual_pub = rospy.Publisher(topic_motors_continual_move, Motors_continual_move, queue_size=10)
-        self.turn_pub = rospy.Publisher(topic_motors_turn, Motors_turn, queue_size=10)
-        self.stop_pub = rospy.Publisher(topic_motors_stop, Empty, queue_size=10)
-        self.sonar_publisher = rospy.Publisher(topic_sonars_request, Empty, queue_size=10)
-        self.sonar_data = Sonar_data()
+        int diameter = rospy.get_param('~diameter','100')
+        self.circle_pub = rospy.Publisher(topic_motors_circle, Motors_circle, queue_size=10)
+        self.done_subscrier = # TODO
         rospy.init_node("trilobot_controller", anonymous=True)
 
-    def sonar_callback(self, data):
-        self.sonar_data.front = data.front
-        self.sonar_data.front_left = data.front_left
-        self.sonar_data.front_right = data.front_right
-        self.sonar_data.back_left = data.back_left
-        self.sonar_data.back_right = data.back_right
-        self.sonar_data.back = data.back
-
-    def go_forward(self, speed):
+    def circle(self, speed):
         rospy.loginfo("Going forward")
         msg = Motors_continual_move()
         msg.speed = speed
@@ -51,7 +41,7 @@ class Demo_Controller:
 
     def check_safe_distance(self, direction, safe_distance=20):
         if direction == "front":
-            return self.sonar_data.front > safe_distance
+            return self.sonar_data.front > 20
         # TODO ostatni smery
 
     def get_sonar_data(self):

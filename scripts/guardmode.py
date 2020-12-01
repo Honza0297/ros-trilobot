@@ -15,15 +15,6 @@ topic_motors_confirmation = "trilobot/motors/confirmation"
 topic_sonars_request = "trilobot/sonars/request"
 topic_sonars_distance = "trilobot/sonars/distance"
 
-def sonar_getter():
-    pb = rospy.Publisher(topic_sonars_request, Empty, queue_size=10)
-    
-    rate = rospy.Rate(0.1)
-    while not rospy.is_shutdown():
-        msg = Empty()
-        rospy.loginfo("Requesting data from sonars")
-        pb.publish(msg)
-        rate.sleep()
 
 class Demo_Controller:
     def __init__(self):
@@ -64,10 +55,11 @@ class Demo_Controller:
     def stop(self):
         self.stop_pub.publish(Empty())
 
-    def turn_angle(self, angle, speed):
+    def turn(self, speed, direction, angle):
         msg = Motors_turn()
         msg.angle = angle
         msg.speed = speed
+        msg.dir = direction
         self.turn_pub.publish(msg)
 
 if __name__ == "__main__":
@@ -78,5 +70,5 @@ if __name__ == "__main__":
         controller.get_sonar_data()
         if not controller.check_safe_distance("front"):
             controller.stop()
-            controller.turn_angle(random.randint(-90,90), 25)
+            controller.turn_angle(25, "L" if random.randint(0,1) else "R", 180)
             controller.go_forward(25)
