@@ -47,7 +47,7 @@ class Demo_Controller:
         msg.speed = speed
         self.continual_pub.publish(msg)
 
-    def check_safe_distance(self, direction, safe_distance=25):
+    def check_safe_distance(self, direction, safe_distance=40):
         if direction == "front":
             return self.sonar_data.front > safe_distance
         # TODO ostatni smery
@@ -90,14 +90,27 @@ if __name__ == "__main__":
     rate = rospy.Rate(5)
     controller.get_sonar_data()
     while not rospy.is_shutdown():
-        if controller.check_safe_distance("front"):
-            controller.go_forward(10)
+        for i in range(10):
+            controller.move(20,10)
             controller.get_sonar_data()
-        elif not controller.check_safe_distance("front"):
+        for i in range(4):
             controller.turn_angle(45, 20)
             controller.get_sonar_data()
-            controller.turn_angle(45, 20)
-            controller.get_sonar_data()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         #controller.get_sonar_data()
         #if not controller.check_safe_distance("front"):
         #    controller.stop()
