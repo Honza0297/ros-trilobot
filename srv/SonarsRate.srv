@@ -1,0 +1,3 @@
+std_msgs/Empty msg
+---
+int8 rate
