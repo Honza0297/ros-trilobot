@@ -1,0 +1,10 @@
+<launch>
+    <node pkg="key_teleop" name="key_teleop" type="key_teleop.py" output="screen"/>
+    
+    <node name="serial_node"        pkg="rosserial_python"      type="serial_node.py">
+    <param name="port"              type="string"               value="/dev/ttyACM0"/>
+    </node>
+
+    <node pkg="trilobot" name="teleop2" type="teleop2.py"/>
+
+</launch>

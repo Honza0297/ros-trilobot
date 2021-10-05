@@ -1,0 +1,10 @@
+<launch>
+    <node name="serial_node"        pkg="rosserial_python"      type="serial_node.py" output="screen">
+    <param name="port"              type="string"               value="/dev/ttyACM0"/>
+    </node>
+
+    <node pkg="trilobot" name="sonars_bridge" type="sonar_bridge.py" output="screen"/>
+    <node pkg="trilobot" name="obstacle_avoider_simple" type="obstacle_avoiding_random.py"/>
+
+
+</launch>

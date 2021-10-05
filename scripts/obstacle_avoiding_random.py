@@ -111,19 +111,21 @@ def set_Twist_msg(direction):
 
 if __name__ == "__main__":
     sample_rate = 5 # Hz
-    #rospy.init_node("obstacle_avoider_simple")
 
     rate_pub = rospy.Publisher(topic_set_rate, Int32, queue_size=10)
-    bridge_enable_pub = rospy.Publisher(topic_bridge_enable, String, queue_size=10)
+    bridge_enable_pub = rospy.Publisher(topic_bridge_enable, String, queue_size=1, latch=True)
     motors_pub = rospy.Publisher(topic_cmd_vel, Twist, queue_size=10)
     
     sonar_sub = rospy.Subscriber(topic_sonars_response, Sonar_data, data_callback)
     rospy.init_node("obstacle_avoider_simple")
+    
     rate_pub.publish(Int32(sample_rate))
 
     bridge_enable_msg = String()
     bridge_enable_msg.data = "run"
     bridge_enable_pub.publish(bridge_enable_msg)
+    rospy.loginfo("Published enable comd")
+
     rate = rospy.Rate(sample_rate)
     while not rospy.is_shutdown():
         direction, dist = get_direction()

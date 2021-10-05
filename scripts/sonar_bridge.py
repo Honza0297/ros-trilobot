@@ -13,8 +13,8 @@ topic_sonars_response = "trilobot/sonars_resp"
 topic_bridge_operation = "trilobot/sonars_bridge"
 topic_set_rate = "trilobot/set_sonars_rate"
 
-sonars_rate = 1 
-enabled = False
+sonars_rate = 10 
+enabled = False #True
 
 def set_rate_callback(msg):
     global sonars_rate
@@ -35,6 +35,7 @@ def operation_callback(msg):
         enabled = True
     elif msg.data == "stop":
         enabled = False
+    
     rospy.loginfo("enabled is {}".format(enabled))
 
 def requester():
@@ -61,7 +62,6 @@ def subscriber():
     # setting request rate
     rate_sub = rospy.Subscriber(topic_set_rate, Int32, set_rate_callback)
 
-    #rate = rospy.Rate(12) # Hz, max 10 Hz from srf, so this should be OK
     rospy.spin()
 
 if __name__ == "__main__":
