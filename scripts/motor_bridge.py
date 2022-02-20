@@ -7,7 +7,11 @@ from trilobot.srv import SonarsRate, SonarsRateResponse
 from trilobot.msg import Sonar_data
 import random
 import threading
-from topics import *
+
+topic_sonars_request = "trilobot/sonars_req"
+topic_sonars_response = "trilobot/sonars_resp"
+topic_bridge_operation = "trilobot/sonars_bridge"
+topic_set_rate = "trilobot/set_sonars_rate"
 
 sonars_rate = 3  
 enabled = True
@@ -38,7 +42,7 @@ def requester():
     global sonars_rate
     global enabled
     rate = rospy.Rate(sonars_rate)
-    req_pub = rospy.Publisher(topic_sonar_request, Empty, queue_size=1)
+    req_pub = rospy.Publisher(topic_sonars_request, Empty, queue_size=1)
 
     while not rospy.is_shutdown():
         rate_val = 1/(rate.sleep_dur.secs*10**9+rate.sleep_dur.nsecs)*(10**9)
@@ -54,9 +58,9 @@ def subscriber():
     rate_service = rospy.Service('sonars_rate', SonarsRate, handle_sonars_rate)
 
     #  enable/disable data request to arduino
-    operation_sub = rospy.Subscriber(topic_trilobot_sonar_bridge_enabled, String, operation_callback)
+    operation_sub = rospy.Subscriber(topic_bridge_operation, String, operation_callback)
     # setting request rate
-    rate_sub = rospy.Subscriber(topic_trilobot_set_sonar_rate, Int32, set_rate_callback)
+    rate_sub = rospy.Subscriber(topic_set_rate, Int32, set_rate_callback)
 
     rospy.spin()
 

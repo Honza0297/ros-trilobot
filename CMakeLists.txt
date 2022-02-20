@@ -58,6 +58,7 @@ find_package(catkin REQUIRED COMPONENTS
    Sonar_data.msg
    IMU.msg
    Battery_state.msg
+   Odometry.msg
    )
 
 ## Generate services in the 'srv' folder

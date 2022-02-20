@@ -5,6 +5,6 @@
     <param name="port"              type="string"               value="/dev/ttyACM0"/>
     </node>
 
-    <node pkg="trilobot" name="teleop2" type="teleop2.py"/>
+    <node pkg="trilobot" name="teleop" type="teleop.py"/>
 
 </launch>

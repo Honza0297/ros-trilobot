@@ -4,18 +4,16 @@ import rospy
 from trilobot.msg import Battery_state 
 from std_msgs.msg import Empty, String, Int32
 from sensor_msgs.msg import BatteryState
+from topics import *
 
-topic_battery_request = "trilobot/battery_req"
-topic_battery_response = "trilobot/battery_resp"
-topic_battery_rpi = "trilobot/battery"
 class BatteryBridge():
     def __init__(self):
-        rospy.init_node('batteryi_bridge')
+        rospy.init_node('battery_bridge')
     
         self.ardu_pub = rospy.Publisher(topic_battery_request, Empty, queue_size=1)
         self.ardu_sub = rospy.Subscriber(topic_battery_response, Battery_state, self.callback)
 
-        self.bridge_pub = rospy.Publisher(topic_battery_rpi, BatteryState, queue_size=1)
+        self.bridge_pub = rospy.Publisher(topic_battery, BatteryState, queue_size=1)
 
     def callback(self, msg):
         rpi_battery_msg = BatteryState()
@@ -24,6 +22,7 @@ class BatteryBridge():
         rpi_battery_msg.voltage = sum(voltages)
         rpi_battery_msg.cell_voltage = voltages
         rpi_battery_msg.present = True
+        rospy.loginfo(rpi_battery_msg)
         self.bridge_pub.publish(rpi_battery_msg)
 
     def spin(self):

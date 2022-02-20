@@ -1,0 +1,4 @@
+<launch>
+	<node name="listener" pkg="rostopic" type="echo" output="screen" args="trilobot/sonar/resp">
+</node>
+</launch>

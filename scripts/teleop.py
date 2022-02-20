@@ -11,7 +11,7 @@ topic_vel = "trilobot/cmd_vel"
 x,z = 0,0
 
 if __name__ == "__main__":
-    rospy.init_node('teleop2_trilobot', anonymous=True)
+    rospy.init_node('trilobot_teleop', anonymous=True)
     pub = rospy.Publisher(topic_vel, Twist, queue_size=10)
     rate = rospy.Rate(10)
     while not rospy.is_shutdown():
