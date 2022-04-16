@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   rosserial_msgs
   rosserial_python
   std_msgs
+  tf2_msgs
   message_generation
   geometry_msgs
 )
@@ -80,6 +81,7 @@ find_package(catkin REQUIRED COMPONENTS
    rosserial_msgs
    std_msgs
    geometry_msgs
+   tf2_msgs
  )
 
 ################################################
@@ -114,7 +116,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES trilobot
-  CATKIN_DEPENDS message_runtime roscpp rospy rosserial_arduino rosserial_client rosserial_msgs rosserial_python std_msgs geometry_msgs
+  CATKIN_DEPENDS message_runtime tf roscpp rospy rosserial_arduino rosserial_client rosserial_msgs rosserial_python std_msgs geometry_msgs
 #  DEPENDS system_lib
 )
 
@@ -169,8 +171,6 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
  catkin_install_python(PROGRAMS
-   scripts/talker.py
-   scripts/sub.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 

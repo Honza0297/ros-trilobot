@@ -52,6 +52,7 @@
   <build_depend>roscpp</build_depend>
   <build_depend>rospy</build_depend>
   <build_depend>rosserial_arduino</build_depend>
+  <exec_depend>tf</exec_depend>
   <build_depend>rosserial_client</build_depend>
   <build_depend>rosserial_msgs</build_depend>
   <build_depend>rosserial_python</build_depend>
