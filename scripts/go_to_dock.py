@@ -49,12 +49,12 @@ class LastMilePlanner():
 	
 	def linear_vel(self, src, dst):
 		vel = 0.1*self.dst(src, dst)
-		return vel if vel > 0.05 else 0.05
+		return vel #if vel > 0.05 else 0.05
 
 	def angular_vel(self,src, dst):
 		angle = atan2(dst.pose.position.y-src.pose.position.y, dst.pose.position.x-src.pose.position.x)
 		avel = 0.1*(angle-src.pose.orientation.z)
-		return avel if avel > 0.05 else 0.05		
+		return avel #if avel > 0.05 else 0.05		
 			
 	def move2goal(self):
 		tolerance = 0.10
@@ -74,7 +74,7 @@ class LastMilePlanner():
 				ok = False
 				rospy.logwarn(e) 
 			
-			try:
+			try: # dock
 				goal_tr = self.buff.lookup_transform("map", self.goal.header.frame_id, rospy.Time.now() - rospy.Duration(0.5), rospy.Duration(0.5))
 				goal_map = tf2_geometry_msgs.do_transform_pose(self.goal, goal_tr) 
 			except (tf.LookupException, tf.ExtrapolationException) as e:
