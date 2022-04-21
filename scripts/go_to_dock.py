@@ -48,12 +48,12 @@ class LastMilePlanner():
                     pow((dst.pose.position.y-src.pose.position.y), 2))
 	
 	def linear_vel(self, src, dst):
-		vel = 0.1*self.dst(src, dst)
+		vel = 0.2*self.dst(src, dst)
 		return vel #if vel > 0.05 else 0.05
 
 	def angular_vel(self,src, dst):
 		angle = atan2(dst.pose.position.y-src.pose.position.y, dst.pose.position.x-src.pose.position.x)
-		avel = 0.1*(angle-src.pose.orientation.z)
+		avel = 0.2*(angle-src.pose.orientation.z)
 		return avel #if avel > 0.05 else 0.05		
 			
 	def move2goal(self):
