@@ -1,0 +1,82 @@
+<launch>
+    <!-- static transform -->
+    <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera" args="0.03 0 0.15 0 0 0 base_link camera_link 30" />
+
+    <!-- camera node for depth, odom, imu, RGBD... -->	
+    <include  
+        file="$(find realsense2_camera)/launch/trilo.launch">
+        <arg name="align_depth" value="true"/>
+        <arg name="linear_accel_cov" value="1.0"/>
+        <arg name="unite_imu_method" value="linear_interpolation"/>
+    </include>
+
+    <!-- For camera IMU -->
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="ImuFilter">
+        <param name="use_mag" type="bool" value="false" />
+        <param name="_publish_tf" type="bool" value="false" />
+        <param name="_world_frame" type="string" value="enu" />
+        <remap from="/imu/data_raw" to="/camera/imu"/>
+    </node>
+ 	
+    <!-- apriltag_ros for detection of Apriltag on the dock and publishing its coord frame -->
+    <include 
+        file="$(find apriltag_ros)/launch/continuous_detection.launch"/>
+
+    <!-- Mapping -->
+    <include file="$(find rtabmap_ros)/launch/rtabmap.launch">
+        <arg name="rgb_topic" value="/camera/color/image_raw"/>
+        <arg name="depth_topic" value="/camera/aligned_depth_to_color/image_raw"/>
+        <arg name="camera_info_topic" value="/camera/color/camera_info"/>
+        <arg name="depth_camera_info_topic" value="/camera/depth/camera_info"/>
+        <arg name="rtabmapviz" value="false"/>
+        <arg name="rviz" value="true"/>
+    </include>
+    <param name="~map_always_update" type="bool" value="true"/>
+	
+    <!-- Localization -->
+    <include file="$(find robot_localization)/launch/ukf_template.launch"/>
+    <param name="/ukf_se/frequency" value="20"/>
+    <param name="/ukf_se/base_link_frame" value="base_link"/>
+    <param name="/ukf_se/odom0" value="rtabmap/odom"/>
+    <rosparam param="/ukf_se/odom0_config">[true,true,true,
+                                            true,true,true,
+                                            true,true,true,
+                                            true,true,true,
+                                            true,true,true]
+    </rosparam>
+    <param name="/ukf_se/odom0_relative" value="true"/>
+    <param name="/ukf_se/odom0_pose_rejection_threshold" value="10000000"/>
+    <param name="/ukf_se/odom0_twist_rejection_threshold" value="10000000"/>
+
+    <param name="/ukf_se/imu0" value="/imu/data"/>
+    <rosparam param="/ukf_se/imu0_config">[false, false, false,
+                                           true,  true,  true,
+                                           true,  true,  true,
+                                           true,  true,  true,
+                                           true,  true,  true]
+    </rosparam>
+    <param name="/ukf_se/imu0_differential" value="true"/>
+    <param name="/ukf_se/imu0_relative" value="false"/>
+    <param name="/ukf_se/use_control" value="false"/>
+
+
+    <!-- move_base -->
+<!--    <group ns="planner">
+        <remap from="/voxel_cloud" to="/planner_cloud"/>
+        <remap from="map" to="/rtabmap/grid_map"/>
+        <remap from="rtabmap/goal" to="/planner_goal"/>
+        
+        <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    	  <rosparam file="$(find trilobot)/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    	  <rosparam file="$(find trilobot)/local_costmap_params.yaml" command="load" />
+    	  <rosparam file="$(find trilobot)/global_costmap_params.yaml" command="load"/>
+    	  <rosparam file="$(find trilobot)/base_local_planner_params.yaml" command="load" />
+   		</node>
+    </group>-->
+	
+      <!-- goal transformation -->
+     <node pkg="trilobot" name="goal_transform" type="transform.py"/>
+
+	<!-- TODO: transformace z/do base_link, map a tak podobne-->
+
+</launch> 

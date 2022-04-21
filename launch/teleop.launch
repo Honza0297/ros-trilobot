@@ -6,5 +6,5 @@
     </node>
 
     <node pkg="trilobot" name="teleop" type="teleop.py"/>
-
+    <node pkg="trilobot" name="move_ctrl" type="move_base.py"/>
 </launch>

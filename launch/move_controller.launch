@@ -1,0 +1,12 @@
+<launch> 
+
+   <!-- move_controller/bridge -->
+     <node pkg="trilobot" name="move_ctrl" type="move_base.py"/>
+
+   <!-- rosserial -->
+   <node name="serial_node"        pkg="rosserial_python"      type="serial_node.py">
+       <param name="port"              type="string"               value="/dev/ttyACM0"/>
+   </node>
+
+
+</launch>
