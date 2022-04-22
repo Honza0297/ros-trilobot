@@ -1,0 +1,9 @@
+<launch>
+
+    <!-- SLAM, Apriltag detection etc... -->
+    <include file="$(find trilobot)/launch/slam_apriltag.launch"/>
+
+    <!-- Actually going to a dock -->
+    <node pkg="trilobot" name="dock_navigator" type="go_to_dock.py"/>
+ 
+</launch>
