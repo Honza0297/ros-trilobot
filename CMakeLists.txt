@@ -8,6 +8,7 @@ project(trilobot)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  actionlib
   roscpp
   rospy
   rosserial_arduino
@@ -18,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_msgs
   message_generation
   geometry_msgs
+  move_base_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -60,6 +62,7 @@ find_package(catkin REQUIRED COMPONENTS
    IMU.msg
    Battery_state.msg
    Odometry.msg
+   Vel.msg
    )
 
 ## Generate services in the 'srv' folder
@@ -145,6 +148,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/trilobot_node.cpp)
+add_executable(trilobot src/sng.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -157,9 +161,7 @@ include_directories(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(trilobot ${catkin_LIBRARIES})
 
 #############
 ## Install ##

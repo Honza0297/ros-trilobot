@@ -30,7 +30,7 @@ class LastMilePlanner():
 		self.goal.header.frame_id = "dock"
 		self.goal.pose.position.x = 0
 		self.goal.pose.position.y = 0
-		self.goal.pose.position.z = 0.2
+		self.goal.pose.position.z = 0.1
 		self.goal.pose.orientation.x = 0
 		self.goal.pose.orientation.y = 0
 		self.goal.pose.orientation.z = 1
@@ -83,6 +83,7 @@ class LastMilePlanner():
 			if ok:
 				if self.dst(pose_map, goal_map) <= tolerance and goal_map.pose.orientation.z - pose_map.pose.orientation.z < 0.1:
 					rospy.loginfo("Goal achieved.")
+					rospy.loginfo("dX: {}, dY: {}, dTheta: {}".format(goal_map.pose.position.x - pose_map.pose.position.x, goal_map.pose.position.y - pose_map.pose.position.y, goal_map.pose.orientation.z - pose_map.pose.orientation.z))
 					break
 				else:
 					vel_msg = Twist()

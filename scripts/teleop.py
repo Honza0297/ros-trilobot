@@ -6,7 +6,7 @@ from geometry_msgs.msg import Twist
 
 
 topic_key = "key_vel"
-topic_vel = "trilobot/cmd_vel"
+topic_vel = "cmd_vel"
 
 x,z = 0,0
 
