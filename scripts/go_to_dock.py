@@ -53,7 +53,7 @@ class LastMilePlanner():
 
 	def angular_vel(self,src, dst):
 		angle = atan2(dst.pose.position.y-src.pose.position.y, dst.pose.position.x-src.pose.position.x)
-		avel = 0.2*(angle-src.pose.orientation.z)
+		avel = 0.3*(angle-src.pose.orientation.z)
 		return avel #if avel > 0.05 else 0.05		
 			
 	def move2goal(self):

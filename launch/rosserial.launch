@@ -4,8 +4,7 @@
     </node>
     
     <node pkg="trilobot" name="move_bridge" type="move_base.py"/>
-    <node pkg="trilobot" name="sonar_bridge" type="sonar_bridge.py"/>
+   <!-- <node pkg="trilobot" name="sonar_bridge" type="sonar_bridge.py"/>-->
     <node pkg="trilobot" name="battery_bridge" type="battery_bridge.py"/>
 
-
-<launch/>
+</launch>

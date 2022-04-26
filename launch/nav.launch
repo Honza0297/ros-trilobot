@@ -1,0 +1,31 @@
+<launch>
+
+    <!-- camera node for depth, odom, imu, RGBD... -->
+    <include file="$(find trilobot)/launch/realsense.launch"/>
+
+    <!-- SLAM -->
+    <include file="$(find trilobot)/launch/slam.launch"/>
+
+    <!-- serial communication-->
+    <include file="$(find trilobot)/launch/rosserial.launch"/> 
+
+    <!-- apriltag detection -->
+    <!--<include file="$(find apriltag_ros)/launch/continuous_detection.launch"/>-->
+    <arg name="cmd_vel_topic" default="/cmd_vel" />
+    <arg name="odom_topic" default="odom" />
+    
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+        <rosparam file="$(find trilobot)/param/costmap_common_params.yaml" command="load" ns="global_costmap" /> 
+        <rosparam file="$(find trilobot)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find trilobot)/param/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find trilobot)/param/global_costmap_params.yaml" command="load" /> 
+        <rosparam file="$(find trilobot)/param/base_local_planner_params.yaml" command="load" />
+        <rosparam file="$(find trilobot)/param/move_base_params.yaml" command="load" />
+	<remap from="cmd_vel" to="$(arg cmd_vel_topic)"/>
+        <remap from="odom" to="$(arg odom_topic)"/>
+	<remap from="map" to="rtabmap/octomap_grid"/>
+ </node>
+
+
+</launch>
