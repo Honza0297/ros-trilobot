@@ -17,8 +17,6 @@ class Starter():
     def spin(self):
     	rate = rospy.Rate(2):
     	while not rospy.is_shutdwn():
-    		if self.arduino_up:
-    			rospy.signal_shutdown(None)
     		self.pub.publish(Empty())
     		rate.sleep()
 
