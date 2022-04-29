@@ -60,8 +60,11 @@ from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from tf.broadcaster import TransformBroadcaster
-from trilobot.msg import Encoders
+from trilobot.msg import Encoders, Direction
 
+dir_none = 0
+dir_forw = 1
+dir_back = 2
 #############################################################################
 class DiffTf:
 #############################################################################
@@ -98,6 +101,13 @@ class DiffTf:
         self.rmult = 0
         self.prev_lencoder = 0
         self.prev_rencoder = 0
+
+        self.lback = 0              # values for backward move
+        self.rback = 0
+        self.prev_rback = 0
+        self.prev_lback = 0
+        self.ldir = 0
+        self.rdir = 0
         self.x = 0                  # position in xy plane 
         self.y = 0
         self.th = 0
@@ -107,7 +117,7 @@ class DiffTf:
         
         # subscriptions
         rospy.Subscriber("trilobot/odometry", Encoders, self.odomCallback)
-        #rospy.Subscriber("rwheel", Int16, self.rwheelCallback)
+        rospy.Subscriber("trilobot/direction", Direction, self.dirCallback)
         self.odomPub = rospy.Publisher("odom1", Odometry, queue_size=10)
         self.odomBroadcaster = TransformBroadcaster()
         
@@ -135,8 +145,13 @@ class DiffTf:
                 d_left = 0
                 d_right = 0
             else:
-                d_left = (self.left - self.enc_left) / self.ticks_meter
-                d_right = (self.right - self.enc_right) / self.ticks_meter
+                lprev = self.enc_left - self.prev_lback
+                lcurr = self.left - self.lback
+
+                rprev = self.enc_right - self.prev_rback
+                rcurr = self.right - self.rback
+                d_left = (lcurr - lprev) / self.ticks_meter
+                d_right = (rcurr - rprev) / self.ticks_meter
             self.enc_left = self.left
             self.enc_right = self.right
            
@@ -190,23 +205,25 @@ class DiffTf:
 
 
     #############################################################################
-    def lwheelCallback(self, msg): # unused
+    def dirCallback(self, msg): # unused
     #############################################################################
-        enc = msg.data
-        if (enc < self.encoder_low_wrap and self.prev_lencoder > self.encoder_high_wrap):
-            self.lmult = self.lmult + 1
-            
-        if (enc > self.encoder_high_wrap and self.prev_lencoder < self.encoder_low_wrap):
-            self.lmult = self.lmult - 1
-            
-        self.left = 1.0 * (enc + self.lmult * (self.encoder_max - self.encoder_min)) 
-        self.prev_lencoder = enc
+        self.ldir = msg.l
+        self.rdir = msg.r
         
     #############################################################################
     def odomCallback(self, msg):
     #############################################################################
         r = msg.r
         l = msg.l
+
+        if self.rdir == dir_back: 
+           self.prev_rback = self.rback 
+           self.rback += (r - self.prev_rencoder) 
+
+        if self.ldir == dir_back:
+            self.prev_lback = self.lback
+            self.lback += (l - self.prev_lencoder)
+
         self.right = r
         self.prev_rencoder = r 
 
