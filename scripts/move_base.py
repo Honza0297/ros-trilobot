@@ -5,6 +5,7 @@
 import rospy
 from trilobot.msg import Vel
 from geometry_msgs.msg import Twist
+import math
 
 cmd_vel = "cmd_vel"
 cmd_vel_out = "trilobot/cmd_vel"
@@ -14,9 +15,9 @@ pub = None
 def callback(msg):
 	rospy.loginfo("callback from move base")
 	pubmsg = Vel()
-	pubmsg.x = msg.linear.x
-	pubmsg.y = msg.linear.y
-	pubmsg.theta = msg.angular.z
+	pubmsg.x = min(msg.linear.x, 0.2)
+	pubmsg.y = min(msg.linear.y,0.2)
+	pubmsg.theta = min(msg.angular.z, math.pi/10)
 	pub.publish(pubmsg)
 
 if __name__ == "__main__":

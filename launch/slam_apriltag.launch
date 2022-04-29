@@ -1,7 +1,7 @@
 <launch>
 
-    <!-- camera node for depth, odom, imu, RGBD... -->
-    <include file="$(find trilobot)/launch/realsense.launch"/>
+    <!-- camera node for depth, odom, imu, RGBD... 
+    <include file="$(find trilobot)/launch/realsense.launch"/>-->
 
     <!-- SLAM -->
     <include file="$(find trilobot)/launch/slam.launch"/>

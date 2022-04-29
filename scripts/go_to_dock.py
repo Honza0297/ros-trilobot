@@ -48,16 +48,16 @@ class LastMilePlanner():
                     pow((dst.pose.position.y-src.pose.position.y), 2))
 	
 	def linear_vel(self, src, dst):
-		vel = 0.2*self.dst(src, dst)
+		vel = self.dst(src, dst)
 		return vel #if vel > 0.05 else 0.05
 
 	def angular_vel(self,src, dst):
 		angle = atan2(dst.pose.position.y-src.pose.position.y, dst.pose.position.x-src.pose.position.x)
-		avel = 0.3*(angle-src.pose.orientation.z)
+		avel = angle-src.pose.orientation.z
 		return avel #if avel > 0.05 else 0.05		
 			
 	def move2goal(self):
-		tolerance = 0.10
+		tolerance = 0.7
 		pose_map = PoseStamped()
 		goal_map = PoseStamped()
 		goal_tr = None
@@ -86,15 +86,23 @@ class LastMilePlanner():
 					rospy.loginfo("dX: {}, dY: {}, dTheta: {}".format(goal_map.pose.position.x - pose_map.pose.position.x, goal_map.pose.position.y - pose_map.pose.position.y, goal_map.pose.orientation.z - pose_map.pose.orientation.z))
 					break
 				else:
+					x = self.linear_vel(pose_map, goal_map)
+					z = self.angular_vel(pose_map, goal_map)
+					a = 1
+					if x > 0.1:
+						a = x/0.1
+						x = 0.1
+						z = z/a*1.1
 					vel_msg = Twist()
 					# Linear velocity in the x-axis.
-					vel_msg.linear.x = self.linear_vel(pose_map, goal_map)
+					vel_msg.linear.x = x
 					vel_msg.linear.y = 0
 					vel_msg.linear.z = 0
 					# Angular velocity in the z-axis.
 					vel_msg.angular.x = 0
 					vel_msg.angular.y = 0
-					vel_msg.angular.z = self.angular_vel(pose_map, goal_map)	
+					vel_msg.angular.z = z	
+					rospy.logwarn("X:{}, Z:{}\n".format(vel_msg.linear.x, vel_msg.angular.z))
 					self.pub.publish(vel_msg)
 			
 				
