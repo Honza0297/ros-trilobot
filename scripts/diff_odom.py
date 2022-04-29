@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
    diff_tf.py - follows the output of a wheel encoder and
@@ -53,7 +53,7 @@ diff_controller.py - controller for a differential drive
 
 import rospy
 import roslib
-roslib.load_manifest('differential_drive')
+#roslib.load_manifest('differential_drive')
 from math import sin, cos, pi
 
 from geometry_msgs.msg import Quaternion
@@ -106,7 +106,7 @@ class DiffTf:
         self.then = rospy.Time.now()
         
         # subscriptions
-        rospy.Subscriber("trilo_odom", Encoders, self.odomCallback)
+        rospy.Subscriber("trilobot/odometry", Encoders, self.odomCallback)
         #rospy.Subscriber("rwheel", Int16, self.rwheelCallback)
         self.odomPub = rospy.Publisher("odom1", Odometry, queue_size=10)
         self.odomBroadcaster = TransformBroadcaster()
@@ -203,9 +203,10 @@ class DiffTf:
         self.prev_lencoder = enc
         
     #############################################################################
-    def rwheelCallback(self, msg):
+    def odomCallback(self, msg):
     #############################################################################
-        r,l = msg.data
+        r = msg.r
+        l = msg.l
         self.right = r
         self.prev_rencoder = r 
 
