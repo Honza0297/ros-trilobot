@@ -60,7 +60,7 @@ from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from tf.broadcaster import TransformBroadcaster
-from trilobot.msg import Encoders, Direction
+from trilobot.msg import Odom
 
 dir_none = 0
 dir_forw = 1
@@ -97,17 +97,16 @@ class DiffTf:
         self.enc_right = None
         self.left = 0               # actual values coming back from robot
         self.right = 0
-        self.lmult = 0
-        self.rmult = 0
+
         self.prev_lencoder = 0
         self.prev_rencoder = 0
 
-        self.lback = 0              # values for backward move
-        self.rback = 0
-        self.prev_rback = 0
-        self.prev_lback = 0
-        self.ldir = 0
-        self.rdir = 0
+    
+        self.lenc_raw = 0
+        self.renc_raw = 0
+
+        
+
         self.x = 0                  # position in xy plane 
         self.y = 0
         self.th = 0
@@ -116,8 +115,8 @@ class DiffTf:
         self.then = rospy.Time.now()
         
         # subscriptions
-        rospy.Subscriber("trilobot/odometry", Encoders, self.odomCallback)
-        rospy.Subscriber("trilobot/direction", Direction, self.dirCallback)
+        rospy.Subscriber("trilobot/odometry", Odom, self.odomCallback)
+        #rospy.Subscriber("trilobot/direction", Direction, self.dirCallback)
         self.odomPub = rospy.Publisher("odom1", Odometry, queue_size=10)
         self.odomBroadcaster = TransformBroadcaster()
         
@@ -145,13 +144,9 @@ class DiffTf:
                 d_left = 0
                 d_right = 0
             else:
-                lprev = self.enc_left - self.prev_lback
-                lcurr = self.left - self.lback
-
-                rprev = self.enc_right - self.prev_rback
-                rcurr = self.right - self.rback
-                d_left = (lcurr - lprev) / self.ticks_meter
-                d_right = (rcurr - rprev) / self.ticks_meter
+                d_left = (self.left - self.enc_left) / self.ticks_meter
+                d_right = (self.right - self.enc_right) / self.ticks_meter
+                rospy.loginfo("dleft: {}, dright: {}".format(d_left, d_right))
             self.enc_left = self.left
             self.enc_right = self.right
            
@@ -205,30 +200,25 @@ class DiffTf:
 
 
     #############################################################################
-    def dirCallback(self, msg): # unused
+    #def dirCallback(self, msg): # unused
     #############################################################################
-        self.ldir = msg.l
-        self.rdir = msg.r
+    #    self.ldir = msg.l
+    #    self.rdir = msg.r
         
     #############################################################################
     def odomCallback(self, msg):
     #############################################################################
         r = msg.r
         l = msg.l
+        rdelta = r - self.renc_raw
+        self.right += -2*rdelta if msg.rdir == dir_back else rdelta
 
-        if self.rdir == dir_back: 
-           self.prev_rback = self.rback 
-           self.rback += (r - self.prev_rencoder) 
+        ldelta = l- self.lenc_raw
+        self.left += -2*ldelta if msg.ldir == dir_back else ldelta
 
-        if self.ldir == dir_back:
-            self.prev_lback = self.lback
-            self.lback += (l - self.prev_lencoder)
+        self.renc_raw = r
+        self.lenc_raw = l
 
-        self.right = r
-        self.prev_rencoder = r 
-
-        self.left = l
-        self.prev_lencoder = l            
 
 #############################################################################
 #############################################################################
