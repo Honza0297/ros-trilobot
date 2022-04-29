@@ -65,6 +65,7 @@ from trilobot.msg import Odom
 dir_none = 0
 dir_forw = 1
 dir_back = 2
+
 #############################################################################
 class DiffTf:
 #############################################################################
@@ -146,7 +147,7 @@ class DiffTf:
             else:
                 d_left = (self.left - self.enc_left) / self.ticks_meter
                 d_right = (self.right - self.enc_right) / self.ticks_meter
-                rospy.loginfo("dleft: {}, dright: {}".format(d_left, d_right))
+                rospy.loginfo("left: {}, enc_left: {}".format(d_left, d_right))
             self.enc_left = self.left
             self.enc_right = self.right
            
@@ -211,10 +212,10 @@ class DiffTf:
         r = msg.r
         l = msg.l
         rdelta = r - self.renc_raw
-        self.right += -2*rdelta if msg.rdir == dir_back else rdelta
+        self.right += -rdelta if msg.rdir == dir_back else rdelta
 
         ldelta = l- self.lenc_raw
-        self.left += -2*ldelta if msg.ldir == dir_back else ldelta
+        self.left += -ldelta if msg.ldir == dir_back else ldelta
 
         self.renc_raw = r
         self.lenc_raw = l
