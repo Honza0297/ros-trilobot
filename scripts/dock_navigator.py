@@ -24,22 +24,7 @@ class DockNavigator():
 		
 		# Charging position without time in "dock" frame
 		self.charging_position = PoseStamped()
-		self.charging_position.header.frame_id = "dock"
-		self.charging_position.pose.position.x = 0
-		self.charging_position.pose.position.y = 0
-		self.charging_position.pose.position.z = CP_OFFSET
-		self.charging_position.pose.orientation.x = 0
-		self.charging_position.pose.orientation.y = 0
-		self.charging_position.pose.orientation.z = 1
-		self.charging_position.pose.orientation.w = 1
-
-		# Dock position in map frame
-		# It is updated until it is impossible
-		self.dock_position = PoseStamped()
-		self.dock_position.header.frame_id = "map"
-
-		#NOTE: delete once done
-		self.temp_pub = rospy.Publisher("temp_dock_pose", PoseStamped, queue_size=10)
+		
 
 
 		self.buff = tf.Buffer(rospy.Duration(120.0))
@@ -51,15 +36,31 @@ class DockNavigator():
 		self.need_charge = msg.data
 
 	def pos_callback(self, msg):
-		# temp position in camera_color_optical_frame frame
-		temp_pose = PoseStamped()
-		temp_pose.header = msg.detections[0].pose.header
-		temp_pose.pose = msg.detections[0].pose.pose.pose
+		# Actually, I dont do anything with the message - just update my internal info about charging position.
+		
+		# temp position of the dock in camera_color_optical_frame frame
+		#temp_dock = PoseStamped()
+		#temp_dock.header = msg.detections[0].pose.header
+		#temp_dock.pose = msg.detections[0].pose.pose.pose
+		
+		charging_position = PoseStamped()
+		charging_position.header.frame_id = "dock"
+		charging_position.pose.position.x = 0
+		charging_position.pose.position.y = 0
+		charging_position.pose.position.z = CP_OFFSET
+		charging_position.pose.orientation.x = 0
+		charging_position.pose.orientation.y = 0
+		charging_position.pose.orientation.z = 1
+		charging_position.pose.orientation.w = 1
+
+
 
 		#TODO: check whether the time warping is needed
-		tr = self.buff.lookup_transform("map", temp_pose.header.frame_id, rospy.Time.now() - rospy.Duration(0.5), rospy.Duration(0.5))
-		self.dock_position = tf2_geometry_msgs.do_transform_pose(temp_pose, tr) 
-		self.temp_pub.publish(self.dock_position)
+		#                               dst,    src  
+		tr = self.buff.lookup_transform("map", "dock", rospy.Time.now() - rospy.Duration(0.5), rospy.Duration(0.5))
+		charging_position.header.stamp = rospy.Time.now()
+		self.charging_position = tf2_geometry_msgs.do_transform_pose(charging_position, tr) 
+		self.temp_pub.publish(self.charging_position)
 
 
 
