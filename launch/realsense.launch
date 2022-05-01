@@ -7,13 +7,13 @@
         <arg name="unite_imu_method" value="linear_interpolation"/>-->
     </include>
 
-    <!--For camera IMU-->
+    <!--For camera IMU
     <node pkg="imu_filter_madgwick" type="imu_filter_node" name="ImuFilter">
         <param name="use_mag" type="bool" value="false" />
         <param name="_publish_tf" type="bool" value="false" />
         <param name="_world_frame" type="string" value="enu" />
         <remap from="/imu/data_raw" to="/camera/imu"/>
-    </node>
+    </node>-->
 
 <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera" args="0.03 0 0.15 0 0 0 base_link camera_link 100" />
 
