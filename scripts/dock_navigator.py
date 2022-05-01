@@ -10,7 +10,7 @@ import tf2_geometry_msgs
 from topics import *
 
 # Offset of the charging position, eg. how far "in front of" the docking station should robot go before final docking
-CP_OFFSET = 0.3
+CP_OFFSET = 0.1
 
 
 class DockNavigator():
@@ -25,7 +25,8 @@ class DockNavigator():
 		# Charging position without time in "dock" frame
 		self.charging_position = PoseStamped()
 		
-
+		#NOTE: delete once done
+		self.temp_pub = rospy.Publisher("temp_dock_pose", PoseStamped, queue_size=10)
 
 		self.buff = tf.Buffer(rospy.Duration(120.0))
 		self.tfl = tf.TransformListener(self.buff)
@@ -49,8 +50,8 @@ class DockNavigator():
 		charging_position.pose.position.y = 0
 		charging_position.pose.position.z = CP_OFFSET
 		charging_position.pose.orientation.x = 0
-		charging_position.pose.orientation.y = 0
-		charging_position.pose.orientation.z = 1
+		charging_position.pose.orientation.y = 1
+		charging_position.pose.orientation.z = 0
 		charging_position.pose.orientation.w = 1
 
 
@@ -67,6 +68,5 @@ class DockNavigator():
 	
 
 if __name__ == "__main__":
-	x = LastMilePlanner()
-	rospy.loginfo("calling m2g")
-	x.move2goal()
+	x = DockNavigator()
+	rospy.spin()
