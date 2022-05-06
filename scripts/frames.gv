@@ -1,0 +1,16 @@
+digraph G {
+"camera_color_optical_frame" -> "dock"[label="Broadcaster: /apriltag_ros_continuous_node\nAverage rate: 3.922 Hz\nMost recent transform: 1651423571.693 ( 0.329 sec old)\nBuffer length: 5.099 sec\n"];
+"camera_aligned_depth_to_color_frame" -> "camera_color_optical_frame"[label="Broadcaster: /camera/realsense2_camera_manager\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1651423572.022 sec old)\nBuffer length: 0.000 sec\n"];
+"base_link" -> "camera_link"[label="Broadcaster: /base_link_to_camera\nAverage rate: 10.185 Hz\nMost recent transform: 1651423572.118 ( -0.096 sec old)\nBuffer length: 4.909 sec\n"];
+"odom" -> "base_link"[label="Broadcaster: /diff_tf\nAverage rate: 10.209 Hz\nMost recent transform: 1651423571.978 ( 0.044 sec old)\nBuffer length: 4.800 sec\n"];
+"camera_link" -> "camera_depth_frame"[label="Broadcaster: /camera/realsense2_camera_manager\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1651423572.022 sec old)\nBuffer length: 0.000 sec\n"];
+"camera_depth_frame" -> "camera_depth_optical_frame"[label="Broadcaster: /camera/realsense2_camera_manager\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1651423572.022 sec old)\nBuffer length: 0.000 sec\n"];
+"camera_link" -> "camera_color_frame"[label="Broadcaster: /camera/realsense2_camera_manager\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1651423572.022 sec old)\nBuffer length: 0.000 sec\n"];
+"camera_link" -> "camera_aligned_depth_to_color_frame"[label="Broadcaster: /camera/realsense2_camera_manager\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1651423572.022 sec old)\nBuffer length: 0.000 sec\n"];
+"map" -> "odom"[label="Broadcaster: /hector_mapping\nAverage rate: 12.916 Hz\nMost recent transform: 1651423571.693 ( 0.329 sec old)\nBuffer length: 5.032 sec\n"];
+"map" -> "scanmatcher_frame"[label="Broadcaster: /hector_mapping\nAverage rate: 12.916 Hz\nMost recent transform: 1651423571.693 ( 0.329 sec old)\nBuffer length: 5.032 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1651423572.022"[ shape=plaintext ] ;
+ }->"map";
+}

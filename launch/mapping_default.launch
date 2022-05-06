@@ -9,9 +9,9 @@
   <arg name="scan_topic" default="camera/scan"/>
   <arg name="map_size" default="1024"/>
   <arg name="map_resolution" default="0.05"/>
-  <!-- ideal distance for d435i is 0.3 m to 3 m, even it is capable to 10 m -->
+  <!-- ideal distance for d435i is 0.3 m to 3 m, even it is capable to 10 m, 5 m as a compromise. Btw, should be the same as max scan dist in realsense.launch -->
   <arg name="laser_min_dist" default="0.3"/>
-  <arg name="laser_max_dist" default="3"/>
+  <arg name="laser_max_dist" default="5"/>
  
   <node pkg="hector_mapping" type="hector_mapping" name="hector_mapping" output="screen">
     
