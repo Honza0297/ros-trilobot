@@ -1,17 +1,17 @@
-iTrajectoryPlannerROS:
+TrajectoryPlannerROS:
 
 # Robot Configuration Parameters
-  max_vel_x: 0.08
+  max_vel_x: 0.20
   min_vel_x: 0.04
-
+  max_rotational_vel: 0.15
   max_vel_theta:  0.3
   min_vel_theta: -0.3
   min_in_place_vel_theta: -0.3
   max_in_place_vel_theta: 0.3
 
-  acc_lim_x: 0.25
+  acc_lim_x: 0.2
   acc_lim_y: 0.0
-  acc_lim_theta: 0.3
+  acc_lim_theta: 0.2
 
   backup_vel: 0.1 # how fast to turn
 
@@ -23,7 +23,7 @@ iTrajectoryPlannerROS:
   holonomic_robot: false
 
 # Forward Simulation Parameters
-  sim_time: 0.8
-  vx_samples: 18
-  vtheta_samples: 20
-  sim_granularity: 0.05
+#  sim_time: 0.8
+#  vx_samples: 18
+#  vtheta_samples: 20
+#  sim_granularity: 0.05

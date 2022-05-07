@@ -1,9 +1,9 @@
 global_costmap:
-  global_frame: odom 
+  global_frame: map # puvodne odom 
   robot_base_frame: base_link
 
-  update_frequency: 5.0
-  publish_frequency: 5.0
-  transform_tolerance: 0.5
+  update_frequency: 1.0
+  publish_frequency: 5.0 # TODO checknout
+  transform_tolerance: 1.1 # TODO checcknout
 
   static_map: true

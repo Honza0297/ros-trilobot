@@ -1,26 +1,31 @@
-obstacle_range: 1.0
-raytrace_range: 1.5
+obstacle_range: 5.0 # max_dist of newly added obstacle [m]
+raytrace_range: 4.0 # max_dist of newly added free space [m]
 
-footprint: [[-0.15, -0.15], [-0.15, 0.15], [0.15, 0.15], [0.15, -0.15]]
+footprint: [[-0.15, -0.15], [-0.15, 0.15], [0.15, 0.15], [0.15, -0.15]] # [m]
 #robot_radius: 0.17
 
-inflation_radius: 0.5
-cost_scaling_factor: 1.0
+inflation_radius: 1 # how far from the obstacle will be non zero cost [m]
+cost_scaling_factor: 2.5 # how steep the decrease will be, bigger = steeper
 
-min_obstacle_height: 0.1
+min_obstacle_height: 0.1 # TODO nemeneno, checknout
 
-NavfnROS:
-    allow_unknown: true
+#NavfnROS: # melo by byt true defaultne
+#    allow_unknown: true
 
 map_type: costmap
 
-observation_sources: point_cloud_sensor scan
+observation_sources: scan # point_cloud_sensor
 
-point_cloud_sensor: {
-sensor_frame: camera_depth_frame,
-data_type: PointCloud2,
-topic: /camera/depth/color/points, 
-marking: true,
-clearing: true}
+#point_cloud_sensor: {
+#sensor_frame: camera_depth_frame,
+#data_type: PointCloud2,
+#topic: /camera/depth/color/points, 
+#marking: true,
+#clearing: true}
 
-scan: {sensor_frame: camera_depth_frame, data_type: LaserScan, topic: camera/scan, marking: true, clearing: true}
+scan: {
+    sensor_frame: camera_depth_frame, # TODO je to ok? nema tam byt base_link? asi ne...
+    data_type: LaserScan,
+    topic: camera/scan,
+    marking: true,
+    clearing: true}

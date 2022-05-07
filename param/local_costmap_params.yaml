@@ -1,14 +1,15 @@
 local_costmap:
-  global_frame: odom
+  global_frame: map
   robot_base_frame: base_link
 
-  update_frequency: 5.0
-  publish_frequency: 5.0
-  transform_tolerance: 0.5  
+  update_frequency: 5.0 # how often update the costmap [Hz]
+  publish_frequency: 2.0 # How often publish information (map?) [Hz]
+  transform_tolerance: 1.1 # Latency for tf [s]  
 
-
+  planner_frequency: 1.0 # How often replan [Hz]
+  planner_patience: 5.0 # How long planner will wait in an attempt to make a plan before space clearing [s]
   static_map: false  
   rolling_window: true
-  width: 3
-  height: 3
+  width: 3.0
+  height: 3.0
   resolution: 0.05
