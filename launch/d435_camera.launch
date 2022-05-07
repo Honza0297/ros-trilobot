@@ -10,8 +10,8 @@
   <arg name="fisheye_height"      default="480"/>
   <arg name="enable_fisheye"      default="false"/>
 
-  <arg name="depth_width"         default="424"/>
-  <arg name="depth_height"        default="240"/>
+  <arg name="depth_width"         default="640"/>
+  <arg name="depth_height"        default="360"/>
   <arg name="enable_depth"        default="true"/>
 
   <arg name="infra_width"        default="640"/>
@@ -24,13 +24,13 @@
   <arg name="enable_color"        default="true"/>
 
   <arg name="fisheye_fps"         default="-1"/>
-  <arg name="depth_fps"           default="15"/>
+  <arg name="depth_fps"           default="30"/>
   <arg name="infra_fps"           default="6"/>
   <arg name="color_fps"           default="6"/>
   <arg name="gyro_fps"            default="200"/>
   <arg name="accel_fps"           default="63"/>
-  <arg name="enable_gyro"         default="true"/>
-  <arg name="enable_accel"        default="true"/>
+  <arg name="enable_gyro"         default="false"/>
+  <arg name="enable_accel"        default="false"/>
 
   <arg name="enable_pointcloud"         default="false"/>
   <arg name="pointcloud_texture_stream" default="RS2_STREAM_COLOR"/>
@@ -110,7 +110,7 @@
           name="depthimage_to_laserscan" 
           args="load depthimage_to_laserscan/DepthImageToLaserScanNodelet $(arg manager)">
       <param name="output_frame_id" value="$(arg camera)_depth_frame"/>
-      <param name="scan_time" value="0.067"/>
+      <param name="scan_time" value="0.033"/>
       <param name="range_min" value="0.30"/>
       <param name="range_max" value="5"/>
       <param name="angle_min" value="-0.75"/>

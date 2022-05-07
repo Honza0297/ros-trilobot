@@ -4,6 +4,6 @@ global_costmap:
 
   update_frequency: 1.0
   publish_frequency: 5.0 # TODO checknout
-  transform_tolerance: 1.1 # TODO checcknout
+  transform_tolerance: 1.25 # TODO checcknout
 
   static_map: true

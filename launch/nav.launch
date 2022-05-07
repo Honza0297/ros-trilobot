@@ -12,15 +12,15 @@
     <!-- apriltag detection
     <include file="$(find apriltag_ros)/launch/continuous_detection.launch"/>-->
     <arg name="cmd_vel_topic" default="/cmd_vel" />
-    <arg name="odom_topic" default="odom1" />
+    <arg name="odom_topic" default="odom1" /> <!--druha moznost je odom 1-->
     
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="log">
-        <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+        <param name="base_local_planner" value="base_local_planner/TrajectoryPlannerROS" />
         <rosparam file="$(find trilobot)/param/costmap_common_params.yaml" command="load" ns="global_costmap" /> 
         <rosparam file="$(find trilobot)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
         <rosparam file="$(find trilobot)/param/local_costmap_params.yaml" command="load" />
         <rosparam file="$(find trilobot)/param/global_costmap_params.yaml" command="load" /> 
-        <rosparam file="$(find trilobot)/param/dwa_local_planner_params.yaml" command="load" />
+        <rosparam file="$(find trilobot)/param/base_local_planner_params.yaml" command="load" />
         <rosparam file="$(find trilobot)/param/move_base_params.yaml" command="load" />
 	<remap from="cmd_vel" to="$(arg cmd_vel_topic)"/>
         <remap from="odom" to="$(arg odom_topic)"/>

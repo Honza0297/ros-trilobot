@@ -1,7 +1,6 @@
 shutdown_costmaps: false # Just let it be :)
-controller_frequency: 10.0 # How often to send cmd_vel
 controller_patience: 15.0
-planner_frequency: 1.0 # How often replan [Hz]
+planner_frequency: 5.0 # How often replan [Hz]
 planner_patience: 5.0 # How long planner will wait in an attempt to make a plan before space clearing [s]
 
 conservative_reset_dist: 3.0

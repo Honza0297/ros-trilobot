@@ -1,7 +1,5 @@
 <launch>
 
-    <!-- camera node for depth, odom, imu, RGBD... -->
-    <include file="$(find trilobot)/launch/realsense.launch"/>
    
     <arg name="scan_topic"  default="/camera/scan" />
     <arg name="base_frame"  default="base_link"/>
@@ -11,8 +9,8 @@
         <param name="base_frame" value="$(arg base_frame)"/>
         <param name="odom_frame" value="$(arg odom_frame)"/>
         <param name="map_update_interval" value="1.0"/>
-        <param name="maxUrange" value="6.0"/>
-        <param name="maxRange" value="8.0"/>
+        <param name="maxUrange" value="2.0"/>
+        <param name="maxRange" value="6.0"/>
         <param name="sigma" value="0.05"/>
         <param name="kernelSize" value="1"/>
         <param name="lstep" value="0.05"/>
@@ -35,15 +33,12 @@
         <param name="ymin" value="-1.0"/>
         <param name="xmax" value="1.0"/>
         <param name="ymax" value="1.0"/>
-        <param name="delta" value="0.05"/> 
+        <param name="delta" value="0.025"/> 
         <param name="llsamplerange" value="0.01"/>
         <param name="llsamplestep" value="0.01"/>
         <param name="lasamplerange" value="0.005"/>
         <param name="lasamplestep" value="0.005"/>
         <remap from="scan" to="$(arg scan_topic)"/>
     </node>
-    
 
-    <!-- Static publisher between base_link (middle of the robot) and realsense camera -->	
-    <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera" args="0.03 0 0.15 0 0 0 base_link camera_link 100" />
 </launch>
