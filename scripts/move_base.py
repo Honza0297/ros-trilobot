@@ -6,6 +6,7 @@ import rospy
 from trilobot.msg import Vel
 from geometry_msgs.msg import Twist
 import math
+from topics import *
 
 cmd_vel = "cmd_vel"
 cmd_vel_out = "trilobot/cmd_vel"
@@ -23,5 +24,6 @@ def callback(msg):
 if __name__ == "__main__":
 	rospy.init_node("base_controller")
 	pub = rospy.Publisher(cmd_vel_out, Vel, queue_size=10)
+	priority_sub = rospy.Subscriber()
 	sub = rospy.Subscriber(cmd_vel, Twist, callback)
 	rospy.spin()
