@@ -63,6 +63,10 @@ class ChargingController():
         self.goal.pose.orientation.z = 0
         self.goal.pose.orientation.w = 1
 
+        # The same position, but in "map" frame. The upper is constant, this is changing, but it can happen that
+        # in the fnal phase, Apriltag is no longer visible by the camera and it is needed to "go blind"
+        self.goal_map = PoseStamped()
+
         # Charging position without time in the "map" frame AKA "in front of the dock" position
         # map frame should ensure the goal will be somehow valid even after a long time - and not direct visibility
         self.charging_position = PoseStamped()    
@@ -259,6 +263,8 @@ class ChargingController():
         rospy.loginfo("Now, i should perform final navigation to the station, not sure whether I am capable to do it :(")
         # not with move base, but "manually"
         while not self.charging:
+            # TODO pokud nevidim dokynu, zacit pocitat. Pokud po vterine stale nebudu pripojeny, tak se "zavrtet" - mozna mi nelicuji kontakty. 
+            # Druha moznsot je zvetst plosky - treba kusem plechu
             self.move2goal()
             self.rate.sleep()
 
@@ -272,9 +278,11 @@ class ChargingController():
             self.rate.sleep()
         self.state = STATE_CHARGING
 
+
     def check_charging(self):
         rospy.loginfo("Charging, checking the voltage levels...")
-        if max(self.cells) > CELL_VOLTAGE_FULL:
+        disconnect_anyway = True # TODO delete once done!
+        if max(self.cells) > CELL_VOLTAGE_FULL or disconnect_anyway:
             self.state = STATE_CHARGED
 
     def disconnect(self):
@@ -319,7 +327,7 @@ class ChargingController():
         tolerance = 0.1 # in x,y
         tolerance_theta = 0.1 # theta
         pose_map = PoseStamped()
-        goal_map = PoseStamped()
+        #goal_map = PoseStamped()
         goal_tr = None
         pose_tr = None
 
@@ -338,13 +346,15 @@ class ChargingController():
         try:  # dock
             goal_tr = self.buff.lookup_transform("map", self.goal.header.frame_id,
                                                  rospy.Time.now(), rospy.Duration(0.5))
-            goal_map = tf2_geometry_msgs.do_transform_pose(self.goal, goal_tr)
+            self.goal_map = tf2_geometry_msgs.do_transform_pose(self.goal, goal_tr)
         except (tf.LookupException, tf.ExtrapolationException) as e:
-            ok = False
-            rospy.logwarn(e)
+            rospy.logwarn("Cannot update goal position in map frame - using the old one...")
+
+            #ok = False
+            #rospy.logwarn("An error occured when converting goal pose to the map frame: {}".format(e))
         if ok:
             if self.dst(pose_map,
-                        goal_map) <= tolerance and goal_map.pose.orientation.z - pose_map.pose.orientation.z < tolerance_theta:
+                        self.goal_map) <= tolerance and self.goal_map.pose.orientation.z - pose_map.pose.orientation.z < tolerance_theta:
                 rospy.loginfo("Goal achieved.")
                 # TODO set flag?
                 #rospy.loginfo(
@@ -353,8 +363,8 @@ class ChargingController():
                 #                                        goal_map.pose.orientation.z - pose_map.pose.orientation.z))
                 return
             else:
-                x = self.linear_vel(pose_map, goal_map)
-                z = self.angular_vel(pose_map, goal_map)
+                x = self.linear_vel(pose_map, self.goal_map)
+                z = self.angular_vel(pose_map, self.goal_map)
                 a = 1
                 if x > 0.1:
                     a = x / 0.1
