@@ -220,9 +220,20 @@ class ChargingController():
         rospy.loginfo("Sending a goal to move_base")
         # the goal is "in front of the dock" position
         goal = MoveBaseGoal()
+
         # magic to get the goal to planar - could be done in the pose_callback as well
-        q_planar = self.charging_position.pose.orientation
-        
+        self.charging_position.pose.orientation.x = 0
+        self.charging_position.pose.orientation.y = 0
+        q = (self.charging_position.pose.orientation.x, self.charging_position.pose.orientation.y, self.charging_position.pose.orientation.z, self.charging_position.pose.orientation.w)
+        m = sum( i*i for i in q)
+        if abs(m-1.0) > 0.0001:
+            ms = sqrt(m)
+            q = tuple(i/ms for i in q)
+        self.charging_position.pose.orientation.x = q[0]
+        self.charging_position.pose.orientation.y = q[1]
+        self.charging_position.pose.orientation.z = q[2]
+        self.charging_position.pose.orientation.w = q[3]
+
 
         self.charging_position.header.stamp = rospy.Time.now()
         self.temp_goal_pub.publish(self.charging_position)
