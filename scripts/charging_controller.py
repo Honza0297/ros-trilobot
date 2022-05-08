@@ -19,7 +19,7 @@ from apriltag_ros.msg import AprilTagDetectionArray
 
 
 # Offset of the charging position, eg. how far "in front of" the docking station should robot go before final docking
-CP_OFFSET = 0.3  # [m]
+CP_OFFSET = 0.2  # [m]
 DOCK_DICOVERY_TIMEOUT = 10  # [s]
 RATE = 10  # [Hz]
 FINAL_CMD_VEL_PERIOD = 0.3  # [s]
@@ -40,6 +40,10 @@ class ChargingController():
         rospy.loginfo("Initializing Charging controller")
         self.rate = rospy.Rate(RATE)
 
+        # For transforms
+        self.buff = tf.Buffer(rospy.Duration(120.0))
+        self.tfl = tf.TransformListener(self.buff)
+
         # private velocity publisher for the final phase
         self.vel_pub = rospy.Publisher(cmd_vel, Twist, queue_size=10)
         self.dock_position_sub = rospy.Subscriber("tag_detections", AprilTagDetectionArray, self.pos_callback)
@@ -52,6 +56,7 @@ class ChargingController():
         self.voltage_checker = rospy.Subscriber(topic_battery_raw, Battery_state, self.bsc) # bsc = battery state callback
         # NOTE: delete once done, server as a debug
         self.temp_pub = rospy.Publisher("temp_dock_pose", PoseStamped, queue_size=10)
+        self.temp_goal_pub = rospy.Publisher("trilobot/goal", PoseStamped, queue_size=10)
 
         # client for sending goals to move_base
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
@@ -85,16 +90,12 @@ class ChargingController():
 
         # Charging position without time in the "map" frame AKA "in front of the dock" position
         # map frame should ensure the goal will be somehow valid even after a long time - and not direct visibility
-        self.charging_position = PoseStamped()
+        self.charging_position = PoseStamped()    
 
-        # For transforms
-        self.buff = tf.Buffer(rospy.Duration(120.0))
-        self.tfl = tf.TransformListener(self.buff)
-
-
-        self.init_charge_pos = None # TODO asi smazat?
-        self.charge_needed = False
-        self.charge_anyway = False
+        # WARNING: For debug purposes, charge needed and charge anyway are set to true
+        # to force charging sequence by default
+        self.charge_needed = True # False 
+        self.charge_anyway = True # False
         self.charging = False
         self.dock_tf_present = False
         self.cells = [-1,-1,-1,-1]
@@ -109,12 +110,19 @@ class ChargingController():
 
     def pos_callback(self, msg):
         # Actually, I dont do anything with the message - just updating my internal info about charging position.
+        # Check whether the initialization is finished. Currently another
+        # approach is tested. TODO If no Attribute Error, delete this
+        #try:
+        #    dummy = self.buff
+        #except AttributeError as e:
+        #    rospy.logwarn("Buffer not available for now: {}".format(e))
+        #    return
         tr = None
         try:
             # TODO: check whether the time warping is needed
             # the line should be like this: tr = self.buff.lookup_transform("map", "dock", rospy.Time.now(), rospy.Duration(0.5))
             #                                dst,   src,                when                            timeout
-            tr = self.buff.lookup_transform("map", "dock", rospy.Time.now() - rospy.Duration(0.5), rospy.Duration(0.5))
+            tr = self.buff.lookup_transform("map", "dock", rospy.Time.now(), rospy.Duration(0.5))
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException)as e:
             rospy.logerr("Transform from dock to map failed: {}".format(e))
             # NOTE we should have another chance with the next iteration of the callback
@@ -125,9 +133,9 @@ class ChargingController():
         charging_position.pose.position.y = 0
         charging_position.pose.position.z = CP_OFFSET # TODO check whether the offset is correct
         charging_position.pose.orientation.x = 0
-        charging_position.pose.orientation.y = 1
+        charging_position.pose.orientation.y = 0.707
         charging_position.pose.orientation.z = 0
-        charging_position.pose.orientation.w = 1
+        charging_position.pose.orientation.w = 0.707
         charging_position.header.stamp = rospy.Time.now()
         self.charging_position = tf2_geometry_msgs.do_transform_pose(charging_position, tr)
         self.dock_tf_present = True
@@ -148,22 +156,33 @@ class ChargingController():
     def update(self):
         while not rospy.is_shutdown():
             if self.state == STATE_INIT:
+                rospy.loginfo("INIT")
                 self.state = STATE_FETCH_DOCK
             elif self.state == STATE_FETCH_DOCK:
+                rospy.loginfo("FETCH_DOCK")
                 self.fetch_dock()
             elif self.state == STATE_CHECKING_CHARGE_NEED:
+                rospy.loginfo("CHECK_CHARGE_NEED")
                 self.check_charge_need()
             elif self.state == STATE_PREP:
+                rospy.loginfo("PREP")
+                #rospy.signal_shutdown("First test complete (stoped just before execution of state_prep)!")
+                #return
                 # here I should be several seconds - is it a problem?
                 # TODO check ^^
+                rospy.loginfo("PREP2")
                 self.prepare_for_charge_goal()
             elif self.state == STATE_FINAL_NAV:
+                rospy.loginfo("FINAL APPROACHING")
                 self.final_approaching()
             elif self.state == STATE_CHARGING:
+                rospy.loginfo("CHARGING")
                 self.check_charging()
             elif self.state == STATE_CHARGED:
+                rospy.loginfo("CHARGED")
                 self.disconnect()
             elif self.state == STATE_FINISHED:
+                rospy.loginfo("FINISHED")
                 self.finish()
             self.rate.sleep()
 
@@ -201,17 +220,22 @@ class ChargingController():
         rospy.loginfo("Sending a goal to move_base")
         # the goal is "in front of the dock" position
         goal = MoveBaseGoal()
+        # magic to get the goal to planar - could be done in the pose_callback as well
+        q_planar = self.charging_position.pose.orientation
+        
+
         self.charging_position.header.stamp = rospy.Time.now()
+        self.temp_goal_pub.publish(self.charging_position)
         goal.target_pose = self.charging_position
         self.client.send_goal(goal)
         res = None
         wait = self.client.wait_for_result()
         if not wait:
-            rospy.logerr("Action server not available!")
+            rospy.logerr("Action server not available! Wait is: {}, res is: {}.".format(wait, self.client.get_result()))
             rospy.signal_shutdown("Action server not available!")
         else:
             res = self.client.get_result()
-            rospy.loginfo("Result from move_base: {}".format(res))
+            rospy.loginfo("Result from move_base: {}, wait: {}".format(res, wait))
         #rospy.spin() # ??
         self.state = STATE_FINAL_NAV
 
@@ -276,7 +300,8 @@ class ChargingController():
         return avel  # if avel > 0.05 else 0.05
 
     def move2goal(self):
-        tolerance = 0.7
+        tolerance = 0.1 # in x,y
+        tolerance_theta = 0.1 # theta
         pose_map = PoseStamped()
         goal_map = PoseStamped()
         goal_tr = None
@@ -296,19 +321,20 @@ class ChargingController():
 
         try:  # dock
             goal_tr = self.buff.lookup_transform("map", self.goal.header.frame_id,
-                                                 rospy.Time.now() - rospy.Duration(0.5), rospy.Duration(0.5))
+                                                 rospy.Time.now(), rospy.Duration(0.5))
             goal_map = tf2_geometry_msgs.do_transform_pose(self.goal, goal_tr)
         except (tf.LookupException, tf.ExtrapolationException) as e:
             ok = False
             rospy.logwarn(e)
         if ok:
             if self.dst(pose_map,
-                        goal_map) <= tolerance and goal_map.pose.orientation.z - pose_map.pose.orientation.z < 0.1:
+                        goal_map) <= tolerance and goal_map.pose.orientation.z - pose_map.pose.orientation.z < tolerance_theta:
                 rospy.loginfo("Goal achieved.")
-                rospy.loginfo(
-                    "dX: {}, dY: {}, dTheta: {}".format(goal_map.pose.position.x - pose_map.pose.position.x,
-                                                        goal_map.pose.position.y - pose_map.pose.position.y,
-                                                        goal_map.pose.orientation.z - pose_map.pose.orientation.z))
+                # TODO set flag?
+                #rospy.loginfo(
+                #    "dX: {}, dY: {}, dTheta: {}".format(goal_map.pose.position.x - pose_map.pose.position.x,
+                #                                        goal_map.pose.position.y - pose_map.pose.position.y,
+                #                                        goal_map.pose.orientation.z - pose_map.pose.orientation.z))
                 return
             else:
                 x = self.linear_vel(pose_map, goal_map)
@@ -327,7 +353,7 @@ class ChargingController():
                 vel_msg.angular.x = 0
                 vel_msg.angular.y = 0
                 vel_msg.angular.z = z
-                rospy.logwarn("X:{}, Z:{}\n".format(vel_msg.linear.x, vel_msg.angular.z))
+                #rospy.logwarn("X:{}, Z:{}\n".format(vel_msg.linear.x, vel_msg.angular.z))
                 self.vel_pub.publish(vel_msg)
 
             #self.rate.sleep()
