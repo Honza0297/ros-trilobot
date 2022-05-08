@@ -19,7 +19,7 @@ from apriltag_ros.msg import AprilTagDetectionArray
 
 
 # Offset of the charging position, eg. how far "in front of" the docking station should robot go before final docking
-CP_OFFSET = 0.2  # [m]
+CP_OFFSET = 0.3  # [m]
 DOCK_DICOVERY_TIMEOUT = 10  # [s]
 RATE = 10  # [Hz]
 FINAL_CMD_VEL_PERIOD = 0.3  # [s]
@@ -40,32 +40,7 @@ class ChargingController():
         rospy.loginfo("Initializing Charging controller")
         self.rate = rospy.Rate(RATE)
 
-        # For transforms
-        self.buff = tf.Buffer(rospy.Duration(120.0))
-        self.tfl = tf.TransformListener(self.buff)
-
-        # private velocity publisher for the final phase
-        self.vel_pub = rospy.Publisher(cmd_vel, Twist, queue_size=10)
-        self.dock_position_sub = rospy.Subscriber("tag_detections", AprilTagDetectionArray, self.pos_callback)
-        # Suppresses main velocity controller
-        self.supressor = rospy.Publisher(topic_priority_move, Bool, queue_size=10)
-        # Force charging sequence no matter how charged batteries are
-        self.charge_anyway_sub = rospy.Subscriber(topic_charge_anyway, Empty, self.cac) # cac = charge anyway callback
-        self.charging_checker = rospy.Subscriber(topic_charging, Bool, self.ccc) # cc = charge check callback
-        self.charge_need_checker = rospy.Subscriber(topic_need_charge, Bool, self.ncc) # ncc = need charge callback
-        self.voltage_checker = rospy.Subscriber(topic_battery_raw, Battery_state, self.bsc) # bsc = battery state callback
-        # NOTE: delete once done, server as a debug
-        self.temp_pub = rospy.Publisher("temp_dock_pose", PoseStamped, queue_size=10)
-        self.temp_goal_pub = rospy.Publisher("trilobot/goal", PoseStamped, queue_size=10)
-
-        # client for sending goals to move_base
-        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        self.client.wait_for_server()
-
-        # How long to wait for dock to appear
-        self.dock_discovery_timeout = rospy.Time.now() + rospy.Duration(DOCK_DICOVERY_TIMEOUT)
-
-        # current robot position in base link
+         # current robot position in base link
         # USE:
         self.pose = PoseStamped()
         self.pose.header.frame_id = "base_link"
@@ -101,6 +76,36 @@ class ChargingController():
         self.cells = [-1,-1,-1,-1]
         self.state = STATE_INIT
 
+
+        # How long to wait for dock to appear
+        self.dock_discovery_timeout = rospy.Time.now() + rospy.Duration(DOCK_DICOVERY_TIMEOUT)
+
+
+        # For transforms
+        self.buff = tf.Buffer(rospy.Duration(120.0))
+        self.tfl = tf.TransformListener(self.buff)
+
+        # private velocity publisher for the final phase
+        self.vel_pub = rospy.Publisher(cmd_vel, Twist, queue_size=10)
+        self.dock_position_sub = rospy.Subscriber("tag_detections", AprilTagDetectionArray, self.pos_callback)
+        # Suppresses main velocity controller
+        self.supressor = rospy.Publisher(topic_priority_move, Bool, queue_size=10)
+        # Force charging sequence no matter how charged batteries are
+        self.charge_anyway_sub = rospy.Subscriber(topic_charge_anyway, Empty, self.cac) # cac = charge anyway callback
+        self.charging_checker = rospy.Subscriber(topic_charging, Bool, self.ccc) # cc = charge check callback
+        self.charge_need_checker = rospy.Subscriber(topic_need_charge, Bool, self.ncc) # ncc = need charge callback
+        self.voltage_checker = rospy.Subscriber(topic_battery_raw, Battery_state, self.bsc) # bsc = battery state callback
+        # NOTE: delete once done, server as a debug
+        self.temp_pub = rospy.Publisher("temp_dock_pose", PoseStamped, queue_size=10)
+        self.temp_goal_pub = rospy.Publisher("trilobot/goal", PoseStamped, queue_size=10)
+
+        # client for sending goals to move_base
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.client.wait_for_server()
+
+
+       
+
     def bsc(self, msg):
         self.cells[0] = msg.cell1
         self.cells[1] = msg.cell2
@@ -124,7 +129,7 @@ class ChargingController():
             #                                dst,   src,                when                            timeout
             tr = self.buff.lookup_transform("map", "dock", rospy.Time.now(), rospy.Duration(0.5))
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException)as e:
-            rospy.logerr("Transform from dock to map failed: {}".format(e))
+            #rospy.logerr("Transform from dock to map failed: {}".format(e))
             # NOTE we should have another chance with the next iteration of the callback
             return
         charging_position = PoseStamped()
