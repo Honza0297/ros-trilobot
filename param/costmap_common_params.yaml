@@ -1,7 +1,7 @@
 obstacle_range: 5.0 # max_dist of newly added obstacle [m]
 raytrace_range: 4.0 # max_dist of newly added free space [m]
 
-footprint: [[-0.15, -0.15], [-0.15, 0.15], [0.15, 0.15], [0.15, -0.15]] # [m]
+footprint: [[-0.16, -0.16], [-0.16, 0.16], [0.16, 0.16], [0.16, -0.16]] # [m]
 footprint_padding: 0.1
 #robot_radius: 0.17
 
