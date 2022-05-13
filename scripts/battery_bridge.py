@@ -14,7 +14,7 @@ class BatteryBridge():
 
         self.bridge_pub = rospy.Publisher(topic_battery, BatteryState, queue_size=1)
         self.need_charge_pub = rospy.Publisher(topic_need_charge, Bool, queue_size=10)
-        self.charging_pub = rospy.Publisher(topic_charging, Bool, queue_size=10)
+        #self.charging_pub = rospy.Publisher(topic_charging, Bool, queue_size=10)
 
     def callback(self, msg):
         # publishing generic battery info
@@ -41,7 +41,7 @@ class BatteryBridge():
             need_charge = True
         
         self.need_charge_pub.publish(Bool(need_charge))
-        self.charging_pub.publish(Bool(msg.charging))
+        #self.charging_pub.publish(Bool(msg.charging))
 
     def spin(self):
         rospy.spin()
