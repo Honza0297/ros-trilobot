@@ -1,6 +1,7 @@
 local_costmap:
   global_frame: odom
   robot_base_frame: base_link
+  resolution: 0.025
 
   update_frequency: 5.0 # how often update the costmap [Hz]
   publish_frequency: 5.0 # How often publish information (map?) [Hz]
