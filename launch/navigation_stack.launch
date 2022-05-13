@@ -20,7 +20,5 @@
 
     <!-- apriltag detection -->
     <include file="$(find trilobot)/launch/continuous_detection.launch"/>
-    
-
 
 </launch>
