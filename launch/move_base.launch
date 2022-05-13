@@ -1,18 +1,7 @@
 <launch>
 
-    <!-- camera node for depth, odom, imu, RGBD... 
-    <include file="$(find trilobot)/launch/realsense.launch"/>-->
-
-    <!-- SLAM 
-    <include file="$(find trilobot)/launch/slam.launch"/>-->
-
-    <!-- serial communication
-    <include file="$(find trilobot)/launch/rosserial.launch"/> -->
-
-    <!-- apriltag detection
-    <include file="$(find apriltag_ros)/launch/continuous_detection.launch"/>-->
     <arg name="cmd_vel_topic" default="/cmd_vel" />
-    <arg name="odom_topic" default="odom1" /> <!--druha moznost je odom 1-->
+    <arg name="odom_topic" default="odom1" />
     
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="log">
         <param name="base_local_planner" value="base_local_planner/TrajectoryPlannerROS" />

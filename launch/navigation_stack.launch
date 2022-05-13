@@ -1,0 +1,26 @@
+<launch>
+
+    <!-- camera node for depth, odom, imu, RGBD... 
+    Currently commented out because it needs to be run before to settle down
+    <include file="$(find trilobot)/launch/realsense.launch"/>-->
+
+
+    <!-- serial communication with Arduino -->
+    <include file="$(find trilobot)/launch/rosserial.launch"/> 
+
+    <!-- Odometry -->
+    <node pkg="trilobot" type="diff_odom.py" name="differential_odom"/>
+
+    <!-- Path planning -->
+    <include file="$(find trilobot)/launch/move_base.launch"/> 
+
+
+    <!-- SLAM -->
+    <include file="$(find trilobot)/launch/gmapping.launch"/>
+
+    <!-- apriltag detection -->
+    <include file="$(find trilobot)/launch/continuous_detection.launch"/>
+    
+
+
+</launch>

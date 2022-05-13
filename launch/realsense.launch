@@ -2,12 +2,9 @@
     <!-- camera node for depth, odom, imu, RGBD... -->
     <include  
         file="$(find trilobot)/launch/d435_camera.launch">
-        <!--<arg name="align_depth" value="true"/>
-        <arg name="linear_accel_cov" value="1.0"/>
-        <arg name="unite_imu_method" value="linear_interpolation"/>-->
     </include>
 
-    <!--For camera IMU
+    <!--For camera IMU - currently not used
     <node pkg="imu_filter_madgwick" type="imu_filter_node" name="ImuFilter">
         <param name="use_mag" type="bool" value="false" />
         <param name="remove_gravity_vector" type="bool" value="true"/>
