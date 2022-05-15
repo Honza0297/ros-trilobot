@@ -260,7 +260,8 @@ class ChargingController():
         self.state = STATE_FINAL_NAV
 
     def final_approaching(self):
-        rospy.loginfo("Now, i should perform final navigation to the station, not sure whether I am capable to do it :(")
+        rospy.info("Now, i should perform final navigation to the station, not sure whether I am capable to do it :(")
+
         # not with move base, but "manually"
         while not self.charging:
             # TODO pokud nevidim dokynu, zacit pocitat. Pokud po vterine stale nebudu pripojeny, tak se "zavrtet" - mozna mi nelicuji kontakty. 
@@ -353,15 +354,15 @@ class ChargingController():
             #ok = False
             #rospy.logwarn("An error occured when converting goal pose to the map frame: {}".format(e))
         if ok:
-            if self.dst(pose_map,
-                        self.goal_map) <= tolerance and self.goal_map.pose.orientation.z - pose_map.pose.orientation.z < tolerance_theta:
-                rospy.loginfo("Goal achieved.")
+            #if self.dst(pose_map,
+            #            self.goal_map) <= tolerance and self.goal_map.pose.orientation.z - pose_map.pose.orientation.z < tolerance_theta:
+                #rospy.loginfo("Goal achieved.")
                 # TODO set flag?
                 #rospy.loginfo(
                 #    "dX: {}, dY: {}, dTheta: {}".format(goal_map.pose.position.x - pose_map.pose.position.x,
                 #                                        goal_map.pose.position.y - pose_map.pose.position.y,
                 #                                        goal_map.pose.orientation.z - pose_map.pose.orientation.z))
-                return
+                #return
             else:
                 x = self.linear_vel(pose_map, self.goal_map)
                 z = self.angular_vel(pose_map, self.goal_map)
