@@ -79,6 +79,7 @@ class DiffTf:
         
         #### parameters #######
         self.rate = rospy.get_param('~rate',10.0)  # the rate at which to publish the transform
+        # 768 per 0.279 m => 2752.69 per 1 m, rounded to 2753
         self.ticks_meter = float(rospy.get_param('ticks_meter', 2753))  # The number of wheel encoder ticks per meter of travel
         self.base_width = float(rospy.get_param('~base_width', 0.2)) # The wheel base width in meters
         
@@ -129,7 +130,7 @@ class DiffTf:
             self.update()
             r.sleep()
        
-     
+    
     #############################################################################
     def update(self):
     #############################################################################
@@ -200,12 +201,7 @@ class DiffTf:
             
 
 
-    #############################################################################
-    #def dirCallback(self, msg): # unused
-    #############################################################################
-    #    self.ldir = msg.l
-    #    self.rdir = msg.r
-        
+    # This method has been edited by Jan Beran
     #############################################################################
     def odomCallback(self, msg):
     #############################################################################
