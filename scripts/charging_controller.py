@@ -66,7 +66,7 @@ class ChargingController():
         # The same position, but in "map" frame. The upper is constant, this is changing, but it can happen that
         # in the fnal phase, Apriltag is no longer visible by the camera and it is needed to "go blind"
         self.goal_map = PoseStamped()
-
+        self.goal_bl = PoseStamped()
         # Charging position without time in the "map" frame AKA "in front of the dock" position
         # map frame should ensure the goal will be somehow valid even after a long time - and not direct visibility
         self.charging_position = PoseStamped()    
@@ -207,7 +207,8 @@ class ChargingController():
         rospy.loginfo("Checking the need of charging")
         # the actual work about checking the charge of need is done in ncc() and cac()
         if self.charge_needed:
-            self.state = STATE_PREP
+            # self.state = STATE_PREP
+            self.state = STATE_FINAL_NAV
 
     def prepare_for_charge_goal(self):
         rospy.loginfo("Preparing for charging")
@@ -258,15 +259,32 @@ class ChargingController():
             rospy.loginfo("Result from move_base: {}, wait: {}".format(res, wait))
         #rospy.spin() # ??
         self.state = STATE_FINAL_NAV
+    def wiggle(self):
+        angular = 0.1
+        num_of_wiggles = 1
+        msg = Twist()
+        for i in range(num_of_wiggles):
+            msg.angular.z = angular
+            self.vel_pub.publish(msg)
+            rospy.sleep(rospy.Duration(0.1))
+            msg.angular.z = -angular
+            self.vel_pub.publish(msg)
+            rospy.sleep(rospy.Duration(0.1))
+
+
 
     def final_approaching(self):
-        rospy.info("Now, i should perform final navigation to the station, not sure whether I am capable to do it :(")
-
+        rospy.loginfo("Now, i should perform final navigation to the station, not sure whether I am capable to do it :(")
+        start = rospy.Time.now()
         # not with move base, but "manually"
         while not self.charging:
             # TODO pokud nevidim dokynu, zacit pocitat. Pokud po vterine stale nebudu pripojeny, tak se "zavrtet" - mozna mi nelicuji kontakty. 
             # Druha moznsot je zvetst plosky - treba kusem plechu
-            self.move2goal()
+            x,th = self.move2goal()
+            rospy.logwarn("X: {}, Theta: {} ".format(x,th))
+            if rospy.Time.now() - start > rospy.Duration(5): # more than 5 seconds of final nav
+                self.wiggle()
+                start = rospy.Time.now()
             self.rate.sleep()
 
         cnt = ceil(FINAL_CMD_VEL_PERIOD / (1/RATE)) # set how many commands send - aim si to send commands for 0.3 s +-
@@ -320,69 +338,79 @@ class ChargingController():
         return vel  # if vel > 0.05 else 0.05
 
     def angular_vel(self, src, dst):
-        angle = atan2(dst.pose.position.y - src.pose.position.y, dst.pose.position.x - src.pose.position.x)
+        dy = dst.pose.position.y - src.pose.position.y
+        dx = dst.pose.position.x - src.pose.position.x
+        angle = atan2(dy, dx)
         avel = angle - src.pose.orientation.z
+        rospy.logwarn("dy: {} dx {}".format(dy, dx))
+        rospy.logwarn("a:{}, spoz: {}".format(angle, src.pose.orientation.z))
         return avel  # if avel > 0.05 else 0.05
 
     def move2goal(self):
         tolerance = 0.1 # in x,y
-        tolerance_theta = 0.1 # theta
+        tolerance_theta = 0.05 # theta
         pose_map = PoseStamped()
         #goal_map = PoseStamped()
         goal_tr = None
         pose_tr = None
-
         #rospy.loginfo("{}".format(self.dst(pose_map, goal_map)))
         self.pose.header.stamp = rospy.Time.now()
         self.goal.header.stamp = rospy.Time.now()
         ok = True
         try:
             pose_tr = self.buff.lookup_transform("map", self.pose.header.frame_id, rospy.Time.now(),
-                                                 rospy.Duration(0.2))
+                                                 rospy.Duration(0.1))
             pose_map = tf2_geometry_msgs.do_transform_pose(self.pose, pose_tr)
         except (tf.LookupException, tf.ExtrapolationException) as e:
             ok = False
             rospy.logwarn(e)
 
-        try:  # dock
-            goal_tr = self.buff.lookup_transform("map", self.goal.header.frame_id,
-                                                 rospy.Time.now(), rospy.Duration(0.5))
-            self.goal_map = tf2_geometry_msgs.do_transform_pose(self.goal, goal_tr)
+
+        try:  # dock in bl
+            goal_tr = self.buff.lookup_transform("base_link", self.goal.header.frame_id,
+                                                 rospy.Time(), rospy.Duration(0.1))
+            self.goal_bl = tf2_geometry_msgs.do_transform_pose(self.goal, goal_tr)
+
         except (tf.LookupException, tf.ExtrapolationException) as e:
-            rospy.logwarn("Cannot update goal position in map frame - using the old one...")
+            if self.dock_tf_present:
+                rospy.logwarn("Cannot update goal position in base_link frame - using the old one...")
+            else:
+                return
 
             #ok = False
             #rospy.logwarn("An error occured when converting goal pose to the map frame: {}".format(e))
+        retval = (float("inf"), float("inf"))
         if ok:
             #if self.dst(pose_map,
             #            self.goal_map) <= tolerance and self.goal_map.pose.orientation.z - pose_map.pose.orientation.z < tolerance_theta:
-                #rospy.loginfo("Goal achieved.")
-                # TODO set flag?
-                #rospy.loginfo(
-                #    "dX: {}, dY: {}, dTheta: {}".format(goal_map.pose.position.x - pose_map.pose.position.x,
-                #                                        goal_map.pose.position.y - pose_map.pose.position.y,
-                #                                        goal_map.pose.orientation.z - pose_map.pose.orientation.z))
-                #return
-            else:
-                x = self.linear_vel(pose_map, self.goal_map)
-                z = self.angular_vel(pose_map, self.goal_map)
-                a = 1
-                if x > 0.1:
-                    a = x / 0.1
-                    x = 0.1
-                    z = z / a * 1.1
-                vel_msg = Twist()
-                # Linear velocity in the x-axis.
-                vel_msg.linear.x = x
-                vel_msg.linear.y = 0
-                vel_msg.linear.z = 0
-                # Angular velocity in the z-axis.
-                vel_msg.angular.x = 0
-                vel_msg.angular.y = 0
-                vel_msg.angular.z = z
-                #rospy.logwarn("X:{}, Z:{}\n".format(vel_msg.linear.x, vel_msg.angular.z))
-                self.vel_pub.publish(vel_msg)
-
+            #rospy.loginfo("Goal achieved.")
+            # TODO set flag?
+            #rospy.loginfo(
+            #    "dX: {}, dY: {}, dTheta: {}".format(goal_map.pose.position.x - pose_map.pose.position.x,
+            #                                        goal_map.pose.position.y - pose_map.pose.position.y,
+            #                                        goal_map.pose.orientation.z - pose_map.pose.orientation.z))
+            #return
+            x = self.linear_vel(self.pose, self.goal_bl)
+            z = self.angular_vel(self.pose, self.goal_bl)*1.4
+            a = 1
+            vel_max = 0.1
+            if x > vel_max:
+                a = x / vel_max
+                x = vel_max
+                z = z / a * 1.5
+            vel_msg = Twist()
+            # Linear velocity in the x-axis.
+            vel_msg.linear.x = x
+            vel_msg.linear.y = 0
+            vel_msg.linear.z = 0
+            # Angular velocity in the z-axis.
+            vel_msg.angular.x = 0
+            vel_msg.angular.y = 0
+            vel_msg.angular.z = z
+            #rospy.logwarn("X:{}, Z:{}\n".format(vel_msg.linear.x, vel_msg.angular.z))
+            self.vel_pub.publish(vel_msg)
+            retval = (x, z)
+        return retval
             #self.rate.sleep()
 
 
