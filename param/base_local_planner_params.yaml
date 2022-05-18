@@ -17,8 +17,8 @@ TrajectoryPlannerROS:
 
   escape_vel: -0.1 
   meter_scoring: true
-  occdist_scale:  0.3 #The weighting for how much the controller should attempt to avoid obstacles. default 0.01
-  pdist_scale: 10.0  #     The weighting for how much the controller should stay close to the path it was given . default 0.6
+  occdist_scale:  0.3 #   The weighting for how much the controller should attempt to avoid obstacles. default 0.01
+  pdist_scale: 10.0  #    The weighting for how much the controller should stay close to the path it was given . default 0.6
   gdist_scale: 10.0 #     The weighting for how much the controller should attempt to reach its local goal, also controls speed  default 0.8
 # Goal Tolerance Parameters
   

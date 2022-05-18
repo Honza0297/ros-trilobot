@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
+
+"""
+Author: Jan Beran
+Description: Charging control class. Details can be found in my diploma thesis.  
+"""
+# Generic includes
 from math import atan2, sqrt, ceil
 
-import rospy
-from trilobot.msg import Battery_state 
-from std_msgs.msg import Empty, String, Int32, Bool
-from sensor_msgs.msg import BatteryState
-from topics import *
-from geometry_msgs.msg import Twist
 
+# ROS includes
+import rospy
 import actionlib
+
+from std_msgs.msg import Empty, Bool
+from geometry_msgs.msg import Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 import tf2_ros as tf
@@ -18,13 +23,25 @@ import tf2_geometry_msgs
 from apriltag_ros.msg import AprilTagDetectionArray
 
 
+#Trilobot includes
+from topics import *
+from trilobot.msg import Battery_state 
+
+#################################
+# Config variables
+# You can try to change them in case controller does not work well
+##################################
 # Offset of the charging position, eg. how far "in front of" the docking station should robot go before final docking
 CP_OFFSET = 0.3  # [m]
 DOCK_DICOVERY_TIMEOUT = 10  # [s]
-RATE = 10  # [Hz]
-FINAL_CMD_VEL_PERIOD = 0.3  # [s]
+RATE = 10  # [Hz], How often to run rospy loop 
+
+FINAL_CMD_VEL_PERIOD = 0.3  # [s] TODO WTF
 CELL_VOLTAGE_FULL = 4.2
 
+##################################
+# Constants
+##################################
 STATE_INIT = 0
 STATE_FETCH_DOCK = 1
 STATE_CHECKING_CHARGE_NEED = 2
@@ -34,14 +51,15 @@ STATE_CHARGING = 5
 STATE_CHARGED = 6
 STATE_FINISHED = 7
 
+
+
+
 class ChargingController():
     def __init__(self) :
         rospy.init_node("charging_controller", anonymous=True)
         rospy.loginfo("Initializing Charging controller")
         self.rate = rospy.Rate(RATE)
 
-         # current robot position in base link
-        # USE:
         self.pose = PoseStamped()
         self.pose.header.frame_id = "base_link"
         self.pose.pose.position.x = 0
@@ -106,6 +124,7 @@ class ChargingController():
         # client for sending goals to move_base
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.client.wait_for_server()
+        self.disconnect_anyway = True # TODO delete once done!
 
 
        
@@ -300,9 +319,20 @@ class ChargingController():
 
     def check_charging(self):
         rospy.loginfo("Charging, checking the voltage levels...")
-        disconnect_anyway = True # TODO delete once done!
-        if max(self.cells) > CELL_VOLTAGE_FULL or disconnect_anyway:
-            self.state = STATE_CHARGED
+        #Assuming quite big error, but that should not be a problem
+        # Overall charging time from 0 to full with 2A current: 3 hours (CC/CV) or 10800 sec
+        # Linear regression of votlage dependence on capacity, 4.2 ~ full, 3.4 ~ 0.1 capacity left
+        v2c = lambda v: 1.125*v-3.725
+        # Average remaining capacity (ignoring negative values caused by the aproximation above)
+        remaining_capacity = sum([v2c(cell) if v2c(cell) > 0 else 0 for cell in self.cells])/len(self.cells)
+
+        FULL_CHARGING_TIME = 10800 # sec
+        charging_time = rospy.Duration(FULL_CHARGING_TIME*(1-remaining_capacity))
+        charging_start = rospy.Time.now()
+        while rospy.Time.now()-charging_start < charging_time or max(self.cells) < CELL_VOLTAGE_FULL or not self.disconnect_anyway: 
+            self.rate.sleep()
+        
+        self.state = STATE_CHARGED
 
     def disconnect(self):
         rospy.loginfo("Trilobot charged, disconnecting...")
@@ -362,7 +392,7 @@ class ChargingController():
                                                  rospy.Duration(0.1))
             pose_map = tf2_geometry_msgs.do_transform_pose(self.pose, pose_tr)
         except (tf.LookupException, tf.ExtrapolationException) as e:
-            ok = False
+            ok = False# TODO HERE
             rospy.logwarn(e)
 
 

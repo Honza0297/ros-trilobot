@@ -1,4 +1,7 @@
-
+"""
+Author: Jan Beran
+Description: Class for converting Twist message type to trilobot/Vel
+"""
 import rospy
 from trilobot.msg import Vel
 from geometry_msgs.msg import Twist
@@ -6,7 +9,10 @@ from std_msgs.msg import Bool
 import math
 from topics import *
 
-
+"""
+Converts geometry_msgs/Twist to trilobot/Vel msg type. 
+It also has a not completed implementation of prioritized move commands, currently in interphase.
+"""
 class MoveBridge:
     def __init__(self, priority_mode=False):
         self.priority_move = False

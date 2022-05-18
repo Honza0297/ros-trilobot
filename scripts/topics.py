@@ -1,3 +1,8 @@
+"""
+Author: Jan Beran
+Description: One place to put all the topics for simple maintaining.
+"""
+
 topic_sonar_data = "trilobot/sonar_data"
 topic_battery_raw = "trilobot/battery_raw"
 topic_battery = "trilobot/battery"
