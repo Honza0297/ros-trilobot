@@ -282,6 +282,14 @@ class ChargingController():
             self.vel_pub.publish(msg)
             rospy.sleep(rospy.Duration(0.1))
 
+    def go_back(self, duration):
+        start = rospy.Time.now()
+        msg = Twist()
+        msg.linear.x = -0.01 # Internally, Trilobot will go forward with the smallest possible speed
+        while rospy.Time.now() - start < duration:
+            self.vel_pub.publish(msg)
+            self.rate.sleep()
+
 
     def final_approaching(self):
         #rospy.info("Now, i should perform final navigation to the station, not sure whether I am capable to do it :(")
@@ -290,8 +298,9 @@ class ChargingController():
         # Navigation not with move_base node, but "manually"
         while not self.charging:
             self.move2goal()
-            if rospy.Time.now() - start > rospy.Duration(10): # more than 10 seconds of final nav
-                self.wiggle()
+            if rospy.Time.now() - start > rospy.Duration(7): # more than 10 seconds of final nav
+                #self.wiggle()
+                self.go_back(rospy.Duration(3))
                 start = rospy.Time.now()
             self.rate.sleep()
 
