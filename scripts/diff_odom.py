@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
 """
+   Author:  Jan Beran, Jon Stephan, Vanadium Labs LLC
+   Description (by Jan Beran): Subscribes to raw encoder readings from Arduino
+                               and covnerts them into Odometry message
+
    diff_tf.py - follows the output of a wheel encoder and
    creates tf and odometry messages.
    some code borrowed from the arbotix diff_controller script
@@ -53,7 +57,6 @@ diff_controller.py - controller for a differential drive
 
 import rospy
 import roslib
-#roslib.load_manifest('differential_drive')
 from math import sin, cos, pi
 
 from geometry_msgs.msg import Quaternion
@@ -79,6 +82,7 @@ class DiffTf:
         
         #### parameters #######
         self.rate = rospy.get_param('~rate',10.0)  # the rate at which to publish the transform
+        # 768 per 0.279 m => 2752.69 per 1 m, rounded to 2753
         self.ticks_meter = float(rospy.get_param('ticks_meter', 2753))  # The number of wheel encoder ticks per meter of travel
         self.base_width = float(rospy.get_param('~base_width', 0.2)) # The wheel base width in meters
         
@@ -87,8 +91,6 @@ class DiffTf:
         
         self.encoder_min = rospy.get_param('encoder_min', 0)
         self.encoder_max = rospy.get_param('encoder_max', 4294967295) # AKA uint_32_t max value
-        #self.encoder_low_wrap = rospy.get_param('wheel_low_wrap', (self.encoder_max - self.encoder_min) * 0.3 + self.encoder_min )
-        #self.encoder_high_wrap = rospy.get_param('wheel_high_wrap', (self.encoder_max - self.encoder_min) * 0.7 + self.encoder_min )
  
         self.t_delta = rospy.Duration(1.0/self.rate)
         self.t_next = rospy.Time.now() + self.t_delta
@@ -117,7 +119,6 @@ class DiffTf:
         
         # subscriptions
         rospy.Subscriber("trilobot/odometry", Odom, self.odomCallback)
-        #rospy.Subscriber("trilobot/direction", Direction, self.dirCallback)
         self.odomPub = rospy.Publisher("odom1", Odometry, queue_size=10)
         self.odomBroadcaster = TransformBroadcaster()
         
@@ -129,7 +130,7 @@ class DiffTf:
             self.update()
             r.sleep()
        
-     
+    
     #############################################################################
     def update(self):
     #############################################################################
@@ -200,12 +201,7 @@ class DiffTf:
             
 
 
-    #############################################################################
-    #def dirCallback(self, msg): # unused
-    #############################################################################
-    #    self.ldir = msg.l
-    #    self.rdir = msg.r
-        
+    # This method has been edited by Jan Beran
     #############################################################################
     def odomCallback(self, msg):
     #############################################################################

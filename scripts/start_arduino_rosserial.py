@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-
+"""
+Author: Jan Beran
+Description: "Keepalive node" that periodically sends message to the Arduino
+             in purpose to keep the main loop in Arduino running.
+             It is a precaution, in case Raspberry logic breaks, missing ping 
+             will stop the Arduino (and most importantly, motors)
+"""
 import rospy
 from trilobot.msg import *
 from trilobot.msg import Battery_state
@@ -13,16 +19,16 @@ class Starter():
         self.arduino_up = False
 
     def callback(self, msg):
-    	self.arduino_up = True
+        self.arduino_up = True
 
     def spin(self):
-    	rate = rospy.Rate(2)
-    	while not rospy.is_shutdown():
-    		self.pub.publish(Empty())
-    		rate.sleep()
+        rate = rospy.Rate(2)
+        while not rospy.is_shutdown():
+            self.pub.publish(Empty())
+            rate.sleep()
 
 if __name__ == "__main__":
-    rospy.init_node('rosserial_arduino_starter')
+    rospy.init_node('rosserial_arduino_starter', anonymous=True)
     starter = Starter()
     starter.spin() 
 
