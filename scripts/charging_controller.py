@@ -207,8 +207,8 @@ class ChargingController():
         rospy.loginfo("Checking the need of charging")
         # the actual work about checking the charge of need is done in ncc() and cac()
         if self.charge_needed:
-            # self.state = STATE_PREP
-            self.state = STATE_FINAL_NAV
+            self.state = STATE_PREP
+            #self.state = STATE_FINAL_NAV
 
     def prepare_for_charge_goal(self):
         rospy.loginfo("Preparing for charging")
@@ -282,7 +282,7 @@ class ChargingController():
             # Druha moznsot je zvetst plosky - treba kusem plechu
             x,th = self.move2goal()
             rospy.logwarn("X: {}, Theta: {} ".format(x,th))
-            if rospy.Time.now() - start > rospy.Duration(5): # more than 5 seconds of final nav
+            if rospy.Time.now() - start > rospy.Duration(10): # more than 5 seconds of final nav
                 self.wiggle()
                 start = rospy.Time.now()
             self.rate.sleep()
@@ -391,13 +391,14 @@ class ChargingController():
             #                                        goal_map.pose.orientation.z - pose_map.pose.orientation.z))
             #return
             x = self.linear_vel(self.pose, self.goal_bl)
-            z = self.angular_vel(self.pose, self.goal_bl)*1.4
+            z = self.angular_vel(self.pose, self.goal_bl)
+            z = sqrt(z) if z > 0 else sqrt(abs(z))*-1 
             a = 1
             vel_max = 0.1
             if x > vel_max:
                 a = x / vel_max
                 x = vel_max
-                z = z / a * 1.5
+                z = z / a #* 1.5
             vel_msg = Twist()
             # Linear velocity in the x-axis.
             vel_msg.linear.x = x
