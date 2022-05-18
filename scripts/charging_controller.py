@@ -36,8 +36,12 @@ CP_OFFSET = 0.3  # [m]
 DOCK_DICOVERY_TIMEOUT = 10  # [s]
 RATE = 10  # [Hz], How often to run rospy loop 
 
-FINAL_CMD_VEL_PERIOD = 0.3  # [s] TODO WTF
-CELL_VOLTAGE_FULL = 4.2
+FINAL_CMD_VEL_PERIOD = 0.3  # [s], how long to send commands to ensure stable charging connection
+# Officialy, it is 4.2, but voltage dividers have tendencies to error.
+# And there are other ways to stop charging (both SW and HW),
+# so it is not a problem to set "full voltage" a little higher.
+CELL_VOLTAGE_FULL = 4.3   
+FULL_CHARGING_TIME = 10800 # [s]
 
 ##################################
 # Constants
@@ -59,7 +63,43 @@ class ChargingController():
         rospy.init_node("charging_controller", anonymous=True)
         rospy.loginfo("Initializing Charging controller")
         self.rate = rospy.Rate(RATE)
+        
+        # WARNING: For debug purposes, charge needed, charge anyway and disconnect_anyway are set to true
+        # to force charging sequence by default
+        self.charge_needed = True # False 
+        self.charge_anyway = True # False
+        self.disconnect_anyway = True
+        self.charging = False
+        self.dock_tf_present = False
+        self.cells = [-1,-1,-1,-1]
+        self.state = STATE_INIT
+        # How long to wait for dock to appear
+        self.dock_discovery_timeout = rospy.Time.now() + rospy.Duration(DOCK_DICOVERY_TIMEOUT)
 
+        # For transforms
+        self.buff = tf.Buffer(rospy.Duration(120.0))
+        self.tfl = tf.TransformListener(self.buff)
+
+        # private velocity publisher for the final phase
+        self.vel_pub = rospy.Publisher(cmd_vel, Twist, queue_size=10)
+        # Suppresses main velocity controller
+        self.supressor = rospy.Publisher(topic_priority_move, Bool, queue_size=10)
+
+        self.dock_position_sub = rospy.Subscriber("tag_detections", AprilTagDetectionArray, self.pos_callback)
+        # Force charging sequence no matter how charged batteries are
+        self.charge_anyway_sub = rospy.Subscriber(topic_charge_anyway, Empty, self.cac) # cac = charge anyway callback
+        # Force disconnect from dock no matter how charged batteries are
+        self.disconnect_anyway_sub = rospy.Subscriber(topic_disconnect_anyway, Empty, self.dac) # cac = charge anyway callback
+        self.charging_checker = rospy.Subscriber(topic_charging, Bool, self.ccc) # cc = charge check callback
+        self.charge_need_checker = rospy.Subscriber(topic_need_charge, Bool, self.ncc) # ncc = need charge callback
+        self.voltage_checker = rospy.Subscriber(topic_battery_raw, Battery_state, self.bsc) # bsc = battery state callback
+
+        # client for sending goals to move_base
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.client.wait_for_server()
+
+
+        # Robot's pose in base_link frame, used for further computations
         self.pose = PoseStamped()
         self.pose.header.frame_id = "base_link"
         self.pose.pose.position.x = 0
@@ -70,117 +110,93 @@ class ChargingController():
         self.pose.pose.orientation.z = 0
         self.pose.pose.orientation.w = 1
 
-        # Position in docking station when trilo is really charging (not the "in front of" pose!)
+        # Position in docking station when trilo is really charging
         self.goal = PoseStamped()
         self.goal.header.frame_id = "dock"
         self.goal.pose.position.x = 0
         self.goal.pose.position.y = 0
-        self.goal.pose.position.z = 0.0 # TODO WARNING Nastavit to tak, aby trilo zadokoval, ale zase dokynu nepřejel!
+        self.goal.pose.position.z = 0.0 
         self.goal.pose.orientation.x = 0
-        self.goal.pose.orientation.y = 1 # TODO is this correct
+        self.goal.pose.orientation.y = 1 
         self.goal.pose.orientation.z = 0
         self.goal.pose.orientation.w = 1
 
-        # The same position, but in "map" frame. The upper is constant, this is changing, but it can happen that
+        # The same position as the previous one, but in "map" frame. The upper is constant, this is changing, but it can happen that
         # in the fnal phase, Apriltag is no longer visible by the camera and it is needed to "go blind"
         self.goal_map = PoseStamped()
         self.goal_bl = PoseStamped()
         # Charging position without time in the "map" frame AKA "in front of the dock" position
-        # map frame should ensure the goal will be somehow valid even after a long time - and not direct visibility
+        # map frame should ensure the goal will be somehow valid even after a long time with no direct visibility
         self.charging_position = PoseStamped()    
 
-        # WARNING: For debug purposes, charge needed and charge anyway are set to true
-        # to force charging sequence by default
-        self.charge_needed = True # False 
-        self.charge_anyway = True # False
-        self.charging = False
-        self.dock_tf_present = False
-        self.cells = [-1,-1,-1,-1]
-        self.state = STATE_INIT
 
+    def pos_callback(self, msg):
+        # Actually, robot does not do anything with the message - just updating my internal info about charging position.
 
-        # How long to wait for dock to appear
-        self.dock_discovery_timeout = rospy.Time.now() + rospy.Duration(DOCK_DICOVERY_TIMEOUT)
+        tr = None
+        try:
+            #                                dst,   src,    when                   timeout
+            tr = self.buff.lookup_transform("map", "dock", rospy.Time.now(), rospy.Duration(0.5))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException)as e:
+            # rospy.logwarn("Transform from dock to map frame failed: {}".format(e))
+            # NOTE we should have another chance with the next iteration of the callback
+            return
+        # Position for final navigation in dock frame - we need to get it in map frame 
+        charging_position = PoseStamped()
+        charging_position.header.frame_id = "dock"
+        charging_position.pose.position.x = 0
+        charging_position.pose.position.y = 0
+        charging_position.pose.position.z = CP_OFFSET 
+        charging_position.pose.orientation.x = 0
+        charging_position.pose.orientation.y = 0.707
+        charging_position.pose.orientation.z = 0
+        charging_position.pose.orientation.w = 0.707
+        charging_position.header.stamp = rospy.Time.now()
+        
 
+        self.charging_position = tf2_geometry_msgs.do_transform_pose(charging_position, tr)
+        # Tag/dock and camera are in 3D space, but Trilobot moves in 2D - so we need to set the goal in 2D.
+        # Very simply, we just zero everything not important in pose orientation and normalize the quaternion. 
+        self.charging_position.pose.orientation.x = 0
+        self.charging_position.pose.orientation.y = 0
+        q = (self.charging_position.pose.orientation.x, self.charging_position.pose.orientation.y, self.charging_position.pose.orientation.z, self.charging_position.pose.orientation.w)
+        m = sum( i*i for i in q)
+        if abs(m-1.0) > 0.0001:
+            ms = sqrt(m)
+            q = tuple(i/ms for i in q)
+        self.charging_position.pose.orientation.x = q[0]
+        self.charging_position.pose.orientation.y = q[1]
+        self.charging_position.pose.orientation.z = q[2]
+        self.charging_position.pose.orientation.w = q[3]
 
-        # For transforms
-        self.buff = tf.Buffer(rospy.Duration(120.0))
-        self.tfl = tf.TransformListener(self.buff)
+        self.dock_tf_present = True
 
-        # private velocity publisher for the final phase
-        self.vel_pub = rospy.Publisher(cmd_vel, Twist, queue_size=10)
-        self.dock_position_sub = rospy.Subscriber("tag_detections", AprilTagDetectionArray, self.pos_callback)
-        # Suppresses main velocity controller
-        self.supressor = rospy.Publisher(topic_priority_move, Bool, queue_size=10)
-        # Force charging sequence no matter how charged batteries are
-        self.charge_anyway_sub = rospy.Subscriber(topic_charge_anyway, Empty, self.cac) # cac = charge anyway callback
-        self.charging_checker = rospy.Subscriber(topic_charging, Bool, self.ccc) # cc = charge check callback
-        self.charge_need_checker = rospy.Subscriber(topic_need_charge, Bool, self.ncc) # ncc = need charge callback
-        self.voltage_checker = rospy.Subscriber(topic_battery_raw, Battery_state, self.bsc) # bsc = battery state callback
-        # NOTE: delete once done, server as a debug
-        self.temp_pub = rospy.Publisher("temp_dock_pose", PoseStamped, queue_size=10)
-        self.temp_goal_pub = rospy.Publisher("trilobot/goal", PoseStamped, queue_size=10)
-
-        # client for sending goals to move_base
-        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        self.client.wait_for_server()
-        self.disconnect_anyway = True # TODO delete once done!
-
-
-       
-
+     # Battery state callback   
     def bsc(self, msg):
         self.cells[0] = msg.cell1
         self.cells[1] = msg.cell2
         self.cells[2] = msg.cell3
         self.cells[3] = msg.cell4
 
+    # Disconnect anyway callback
+    def dac(self, msg):
+        self.disconnect_anyway = msg.data
 
-    def pos_callback(self, msg):
-        # Actually, I dont do anything with the message - just updating my internal info about charging position.
-        # Check whether the initialization is finished. Currently another
-        # approach is tested. TODO If no Attribute Error, delete this
-        #try:
-        #    dummy = self.buff
-        #except AttributeError as e:
-        #    rospy.logwarn("Buffer not available for now: {}".format(e))
-        #    return
-        tr = None
-        try:
-            # TODO: check whether the time warping is needed
-            # the line should be like this: tr = self.buff.lookup_transform("map", "dock", rospy.Time.now(), rospy.Duration(0.5))
-            #                                dst,   src,                when                            timeout
-            tr = self.buff.lookup_transform("map", "dock", rospy.Time.now(), rospy.Duration(0.5))
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException)as e:
-            #rospy.logerr("Transform from dock to map failed: {}".format(e))
-            # NOTE we should have another chance with the next iteration of the callback
-            return
-        charging_position = PoseStamped()
-        charging_position.header.frame_id = "dock"
-        charging_position.pose.position.x = 0
-        charging_position.pose.position.y = 0
-        charging_position.pose.position.z = CP_OFFSET # TODO check whether the offset is correct
-        charging_position.pose.orientation.x = 0
-        charging_position.pose.orientation.y = 0.707
-        charging_position.pose.orientation.z = 0
-        charging_position.pose.orientation.w = 0.707
-        charging_position.header.stamp = rospy.Time.now()
-        self.charging_position = tf2_geometry_msgs.do_transform_pose(charging_position, tr)
-        self.dock_tf_present = True
-        self.temp_pub.publish(self.charging_position)
-
-    # TODO reset flags after charging is done!
+    # Need charge callback
     def ncc(self, msg):
         if not self.charge_anyway:
             self.charge_needed = msg.data
 
+    # Charge anyway callback
     def cac(self, msg):
         self.charge_anyway = True
         self.charge_needed = True
 
+    # Check charge callback
     def ccc(self, msg):
         self.charging = msg.data
 
+    # Main method where state transitions take place
     def update(self):
         while not rospy.is_shutdown():
             if self.state == STATE_INIT:
@@ -194,11 +210,6 @@ class ChargingController():
                 self.check_charge_need()
             elif self.state == STATE_PREP:
                 rospy.loginfo("PREP")
-                #rospy.signal_shutdown("First test complete (stoped just before execution of state_prep)!")
-                #return
-                # here I should be several seconds - is it a problem?
-                # TODO check ^^
-                rospy.loginfo("PREP2")
                 self.prepare_for_charge_goal()
             elif self.state == STATE_FINAL_NAV:
                 rospy.loginfo("FINAL APPROACHING")
@@ -224,7 +235,7 @@ class ChargingController():
 
     def check_charge_need(self):
         rospy.loginfo("Checking the need of charging")
-        # the actual work about checking the charge of need is done in ncc() and cac()
+        # The actual work about checking the charge of need is done in ncc() and cac()
         if self.charge_needed:
             # self.state = STATE_PREP
             self.state = STATE_FINAL_NAV
@@ -238,46 +249,27 @@ class ChargingController():
         # not actually suppress the "standard" commands, just warns about prioritized move in progress
         # The reason is that we cannot dynamically change topic remap in move_base (eg. from cmd_vel to cmd_vel/prioritized
         # or something like that).
-        # FIXME TODO ^^
+        # FIXME ^^ - But probably after diploma thesis.
         msg = Bool()
         msg.data = True
         self.supressor.publish(msg) # pub info about prioritized move
 
-        rospy.loginfo("Cancelling current goal in move_base if there is any")
-        # TODO cancel move base goal if there is any
-
         rospy.loginfo("Sending a goal to move_base")
         # the goal is "in front of the dock" position
         goal = MoveBaseGoal()
-
-        # magic to get the goal to planar - could be done in the pose_callback as well
-        self.charging_position.pose.orientation.x = 0
-        self.charging_position.pose.orientation.y = 0
-        q = (self.charging_position.pose.orientation.x, self.charging_position.pose.orientation.y, self.charging_position.pose.orientation.z, self.charging_position.pose.orientation.w)
-        m = sum( i*i for i in q)
-        if abs(m-1.0) > 0.0001:
-            ms = sqrt(m)
-            q = tuple(i/ms for i in q)
-        self.charging_position.pose.orientation.x = q[0]
-        self.charging_position.pose.orientation.y = q[1]
-        self.charging_position.pose.orientation.z = q[2]
-        self.charging_position.pose.orientation.w = q[3]
-
-
-        self.charging_position.header.stamp = rospy.Time.now()
-        self.temp_goal_pub.publish(self.charging_position)
+        self.charging_position.header.stamp = rospy.Time.now() # Need to pretend the goal is fresh
         goal.target_pose = self.charging_position
         self.client.send_goal(goal)
         res = None
         wait = self.client.wait_for_result()
-        if not wait:
+        if not wait: # Assuming action server is down
             rospy.logerr("Action server not available! Wait is: {}, res is: {}.".format(wait, self.client.get_result()))
             rospy.signal_shutdown("Action server not available!")
         else:
             res = self.client.get_result()
-            rospy.loginfo("Result from move_base: {}, wait: {}".format(res, wait))
-        #rospy.spin() # ??
+            rospy.loginfo("Result from move_base: {}".format(res))
         self.state = STATE_FINAL_NAV
+
     def wiggle(self):
         angular = 0.1
         num_of_wiggles = 1
@@ -291,25 +283,22 @@ class ChargingController():
             rospy.sleep(rospy.Duration(0.1))
 
 
-
     def final_approaching(self):
-        rospy.loginfo("Now, i should perform final navigation to the station, not sure whether I am capable to do it :(")
+        #rospy.info("Now, i should perform final navigation to the station, not sure whether I am capable to do it :(")
+        rospy.loginfo("Final navigation to the dock.")
         start = rospy.Time.now()
-        # not with move base, but "manually"
+        # Navigation not with move_base node, but "manually"
         while not self.charging:
-            # TODO pokud nevidim dokynu, zacit pocitat. Pokud po vterine stale nebudu pripojeny, tak se "zavrtet" - mozna mi nelicuji kontakty. 
-            # Druha moznsot je zvetst plosky - treba kusem plechu
-            x,th = self.move2goal()
-            rospy.logwarn("X: {}, Theta: {} ".format(x,th))
+            self.move2goal()
             if rospy.Time.now() - start > rospy.Duration(5): # more than 5 seconds of final nav
                 self.wiggle()
                 start = rospy.Time.now()
             self.rate.sleep()
 
-        cnt = ceil(FINAL_CMD_VEL_PERIOD / (1/RATE)) # set how many commands send - aim si to send commands for 0.3 s +-
+        # Ensure contact is stable - once charging, go a little further to push contacts
+        cnt = ceil(FINAL_CMD_VEL_PERIOD / (1/RATE)) # set how many commands send 
         msg = Twist()
         msg.linear.x = 0.01 # Internally, Trilobot will go forward with the smallest possible speed
-        # now charging - popojedu ještě trochu, aby byla jistotka
         while cnt:
             self.vel_pub.publish(msg)
             cnt -= 1
@@ -318,16 +307,19 @@ class ChargingController():
 
 
     def check_charging(self):
-        rospy.loginfo("Charging, checking the voltage levels...")
-        #Assuming quite big error, but that should not be a problem
+        rospy.loginfo("Charging, setting the time needed to charge...")
+
+        # Currently, time needed for charging is computed very roughly from battery voltages. 
+        # Assuming quite a big error, but that should not be a problem.
         # Overall charging time from 0 to full with 2A current: 3 hours (CC/CV) or 10800 sec
+
         # Linear regression of votlage dependence on capacity, 4.2 ~ full, 3.4 ~ 0.1 capacity left
         v2c = lambda v: 1.125*v-3.725
         # Average remaining capacity (ignoring negative values caused by the aproximation above)
         remaining_capacity = sum([v2c(cell) if v2c(cell) > 0 else 0 for cell in self.cells])/len(self.cells)
 
-        FULL_CHARGING_TIME = 10800 # sec
         charging_time = rospy.Duration(FULL_CHARGING_TIME*(1-remaining_capacity))
+        rospy.loginfo("Charging time will be {} seconds.".format(charging_time))
         charging_start = rospy.Time.now()
         while rospy.Time.now()-charging_start < charging_time or max(self.cells) < CELL_VOLTAGE_FULL or not self.disconnect_anyway: 
             self.rate.sleep()
@@ -336,6 +328,7 @@ class ChargingController():
 
     def disconnect(self):
         rospy.loginfo("Trilobot charged, disconnecting...")
+        # Currently, "disconnect" means really just go backwards for a while
         cnt = ceil(1 / (1 / RATE))  # set how much commands send, the aim is to send commands for 1 s
         msg = Twist()
         msg.linear.x = -0.01  # Internally, Trilobot will go backward with the smallest possible speed
@@ -343,8 +336,6 @@ class ChargingController():
             self.vel_pub.publish(msg)
             cnt -= 1
             self.rate.sleep()
-        self.charge_anyway = False
-        self.charge_needed = False
         self.state = STATE_FINISHED
 
     def finish(self):
@@ -353,37 +344,41 @@ class ChargingController():
         msg = Bool()
         msg.data = False
         self.supressor.publish(msg)
+        self.charge_anyway = False
+        self.charge_needed = False
+        self.disconnect_anyway = False
+        # self.state = STATE_CHECKING_CHARGE_NEED
+        rospy.loginfo("Charging finished successfully!")
 
-        rospy.logfatal("Task failed successfully! :) ")
-        rospy.signal_shutdown("Task failed successfully! :) ")
+        #rospy.logfatal("Task failed successfully! :) ")
+        #rospy.signal_shutdown("Task failed successfully! :) ")
+    
+    ##################################################
+    # Methods for manual docking and navigation
+    ##################################################
 
     def dst(self, src, dst):
         if src == None or dst == None:
-            return 1000  # one kilometer should be above any possible tolerance :)
+            return 1000  # [km] one kilometer should be above any possible tolerance :)
         return sqrt(pow((dst.pose.position.x - src.pose.position.x), 2) +
                     pow((dst.pose.position.y - src.pose.position.y), 2))
 
     def linear_vel(self, src, dst):
         vel = self.dst(src, dst)
-        return vel  # if vel > 0.05 else 0.05
+        return vel 
 
     def angular_vel(self, src, dst):
         dy = dst.pose.position.y - src.pose.position.y
         dx = dst.pose.position.x - src.pose.position.x
         angle = atan2(dy, dx)
         avel = angle - src.pose.orientation.z
-        rospy.logwarn("dy: {} dx {}".format(dy, dx))
-        rospy.logwarn("a:{}, spoz: {}".format(angle, src.pose.orientation.z))
-        return avel  # if avel > 0.05 else 0.05
+        return avel
 
     def move2goal(self):
-        tolerance = 0.1 # in x,y
-        tolerance_theta = 0.05 # theta
         pose_map = PoseStamped()
         #goal_map = PoseStamped()
         goal_tr = None
         pose_tr = None
-        #rospy.loginfo("{}".format(self.dst(pose_map, goal_map)))
         self.pose.header.stamp = rospy.Time.now()
         self.goal.header.stamp = rospy.Time.now()
         ok = True
@@ -392,7 +387,7 @@ class ChargingController():
                                                  rospy.Duration(0.1))
             pose_map = tf2_geometry_msgs.do_transform_pose(self.pose, pose_tr)
         except (tf.LookupException, tf.ExtrapolationException) as e:
-            ok = False# TODO HERE
+            ok = False
             rospy.logwarn(e)
 
 
