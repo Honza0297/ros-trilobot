@@ -1,5 +1,5 @@
 <launch>
-<node pkg="laser_scan_matcher" type="laser_scan_matcher_node" 
+  <node pkg="laser_scan_matcher" type="laser_scan_matcher_node" 
     name="laser_scan_matcher_node" output="screen">
 
     <param name="fixed_frame" value = "odom"/>

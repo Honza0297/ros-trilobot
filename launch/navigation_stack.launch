@@ -6,7 +6,7 @@
 
 
     <!-- serial communication with Arduino -->
-    <include file="$(find trilobot)/launch/rosserial.launch"/> 
+    <!--<include file="$(find trilobot)/launch/rosserial.launch"/> -->
 
     <!-- Odometry -->
     <node pkg="trilobot" type="diff_odom.py" name="differential_odom"/>
