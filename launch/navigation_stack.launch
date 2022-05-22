@@ -12,7 +12,7 @@
     <node pkg="trilobot" type="diff_odom.py" name="differential_odom"/>
 
     <!-- Path planning -->
-    <include file="$(find trilobot)/launch/move_base.launch"/> 
+    <!--<include file="$(find trilobot)/launch/move_base.launch"/> -->
 
 
     <!-- SLAM -->
@@ -20,5 +20,7 @@
 
     <!-- apriltag detection -->
     <include file="$(find trilobot)/launch/continuous_detection.launch"/>
+
+
 
 </launch>

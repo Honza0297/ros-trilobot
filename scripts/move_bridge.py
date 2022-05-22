@@ -17,7 +17,7 @@ class MoveBridge:
     def __init__(self, priority_mode=False):
         self.priority_move = False
         self.priority_mode = priority_mode
-
+        self.warned = False
         self.sub = rospy.Subscriber(topic_priority_move, Bool, self.priority_callback)
         self.pub = rospy.Publisher(cmd_vel_out, Vel, queue_size=10)
         self.sub = rospy.Subscriber(cmd_vel if not self.priority_mode else topic_priority_cmd_vel, Twist,
@@ -33,8 +33,10 @@ class MoveBridge:
         self.pub.publish(pubmsg)
 
     def callback_standard(self, msg):
-        if self.priority_move:
+        if self.priority_move and not self.warned:
             rospy.logwarn("Priority move in progress")
+            self.warned = True
+
         pubmsg = Vel()
         pubmsg.x = min(msg.linear.x, 0.2)
         pubmsg.y = min(msg.linear.y, 0.2)
@@ -44,6 +46,7 @@ class MoveBridge:
     def priority_callback(self, msg):
         if msg.data:
             self.priority_move = True
+            self.warned = False
         else:
             self.priority_move = False
 

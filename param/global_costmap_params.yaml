@@ -3,10 +3,8 @@ global_costmap:
   robot_base_frame: base_link
 
   update_frequency: 1.0
-  publish_frequency: 5.0 # TODO check
+  publish_frequency: 3.0 # TODO check
   transform_tolerance: 1.25 # TODO check
-  xy_goal_tolerance: 0.20
-  xy_goal_tolerance: 0.20
-  resolution: 0.025
 
   static_map: true
+  rolling_window: true

@@ -32,7 +32,7 @@ from trilobot.msg import Battery_state
 # You can try to change them in case controller does not work well
 ##################################
 # Offset of the charging position, eg. how far "in front of" the docking station should robot go before final docking
-CP_OFFSET = 0.3  # [m]
+CP_OFFSET = 0.7  # [m]
 DOCK_DICOVERY_TIMEOUT = 10  # [s]
 RATE = 10  # [Hz], How often to run rospy loop 
 
@@ -180,7 +180,7 @@ class ChargingController():
 
     # Disconnect anyway callback
     def dac(self, msg):
-        self.disconnect_anyway = msg.data
+        self.disconnect_anyway = True
 
     # Need charge callback
     def ncc(self, msg):
@@ -212,8 +212,9 @@ class ChargingController():
                 rospy.loginfo("PREP")
                 self.prepare_for_charge_goal()
             elif self.state == STATE_FINAL_NAV:
+                self.state = STATE_FINISHED  #TODO DELETE
                 rospy.loginfo("FINAL APPROACHING")
-                self.final_approaching()
+                #self.final_approaching()
             elif self.state == STATE_CHARGING:
                 rospy.loginfo("CHARGING")
                 self.check_charging()
@@ -261,10 +262,13 @@ class ChargingController():
         goal.target_pose = self.charging_position
         self.client.send_goal(goal)
         res = None
-        wait = self.client.wait_for_result()
-        if not wait: # Assuming action server is down
-            rospy.logerr("Action server not available! Wait is: {}, res is: {}.".format(wait, self.client.get_result()))
-            rospy.signal_shutdown("Action server not available!")
+        wait = None
+        while not wait:
+            wait = self.client.wait_for_result(rospy.Duration.from_sec(10.0))
+            if not wait: # Assuming action server is down
+                self.charging_position.header.stamp = rospy.Time.now() # Need to pretend the goal is fresh
+                goal.target_pose = self.charging_position
+                self.client.send_goal(goal)
         else:
             res = self.client.get_result()
             rospy.loginfo("Result from move_base: {}".format(res))
@@ -272,13 +276,18 @@ class ChargingController():
 
     def wiggle(self):
         angular = 0.1
-        num_of_wiggles = 1
+        num_of_wiggles = 3
         msg = Twist()
         for i in range(num_of_wiggles):
             msg.angular.z = angular
             self.vel_pub.publish(msg)
             rospy.sleep(rospy.Duration(0.1))
+            msg.angular.z = angular
+            self.vel_pub.publish(msg)
+            rospy.sleep(rospy.Duration(0.1))
             msg.angular.z = -angular
+            self.vel_pub.publish(msg)
+            rospy.sleep(rospy.Duration(0.1))
             self.vel_pub.publish(msg)
             rospy.sleep(rospy.Duration(0.1))
 
@@ -298,9 +307,11 @@ class ChargingController():
         # Navigation not with move_base node, but "manually"
         while not self.charging:
             self.move2goal()
-            if rospy.Time.now() - start > rospy.Duration(7): # more than 10 seconds of final nav
-                #self.wiggle()
-                self.go_back(rospy.Duration(3))
+            if rospy.Time.now() - start > rospy.Duration(10): # more than 10 seconds of final nav
+                self.wiggle()
+                if self.charging:
+                    break
+                self.go_back(rospy.Duration(10))
                 start = rospy.Time.now()
             self.rate.sleep()
 
@@ -328,9 +339,9 @@ class ChargingController():
         remaining_capacity = sum([v2c(cell) if v2c(cell) > 0 else 0 for cell in self.cells])/len(self.cells)
 
         charging_time = rospy.Duration(FULL_CHARGING_TIME*(1-remaining_capacity))
-        rospy.loginfo("Charging time will be {} seconds.".format(charging_time))
+        rospy.loginfo("Charging time will be {} seconds, voltages: {}.".format(charging_time.secs, self.cells))
         charging_start = rospy.Time.now()
-        while rospy.Time.now()-charging_start < charging_time or max(self.cells) < CELL_VOLTAGE_FULL or not self.disconnect_anyway: 
+        while rospy.Time.now()-charging_start < charging_time and max(self.cells) < CELL_VOLTAGE_FULL and not self.disconnect_anyway: 
             self.rate.sleep()
         
         self.state = STATE_CHARGED
@@ -356,7 +367,7 @@ class ChargingController():
         self.charge_anyway = False
         self.charge_needed = False
         self.disconnect_anyway = False
-        # self.state = STATE_CHECKING_CHARGE_NEED
+        self.state = STATE_CHECKING_CHARGE_NEED
         rospy.loginfo("Charging finished successfully!")
 
         #rospy.logfatal("Task failed successfully! :) ")

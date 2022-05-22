@@ -1,0 +1,13 @@
+digraph G {
+"base_link" -> "camera_link"[label=" Broadcaster: /base_link_to_camera\nAverage rate: 20.102\nBuffer length: 4.925\nMost recent transform: 1652617838.831\nOldest transform: 1652617833.906\n"];
+"odom" -> "base_link"[label=" Broadcaster: /differential_odom\nAverage rate: 10.204\nBuffer length: 4.802\nMost recent transform: 1652617838.754\nOldest transform: 1652617833.952\n"];
+"map" -> "odom"[label=" Broadcaster: /slam_gmapping\nAverage rate: 20.204\nBuffer length: 4.9\nMost recent transform: 1652617838.823\nOldest transform: 1652617833.923\n"];
+"camera_link" -> "camera_depth_frame"[label=" Broadcaster: /camera/realsense2_camera_manager\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"camera_depth_frame" -> "camera_depth_optical_frame"[label=" Broadcaster: /camera/realsense2_camera_manager\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"camera_link" -> "camera_color_frame"[label=" Broadcaster: /camera/realsense2_camera_manager\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"camera_color_frame" -> "camera_color_optical_frame"[label=" Broadcaster: /camera/realsense2_camera_manager\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1652617838.8237603"[ shape=plaintext ] ;
+}->"map";
+}

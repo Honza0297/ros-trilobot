@@ -111,10 +111,11 @@
           args="load depthimage_to_laserscan/DepthImageToLaserScanNodelet $(arg manager)">
       <param name="output_frame_id" value="$(arg camera)_depth_frame"/>
       <param name="scan_time" value="0.033"/>
-      <param name="range_min" value="0.30"/>
-      <param name="range_max" value="5"/>
-      <param name="angle_min" value="-0.75"/>
-      <param name="angle_max" value="0.75"/>
+      <param name="scan_height" value="16"/>
+      <param name="range_min" value="0.3"/>
+      <param name="range_max" value="8"/>
+      <!--<param name="angle_min" value="-0.75"/>
+      <param name="angle_max" value="0.75"/>-->
       <remap from="image" to="depth/image_rect_raw"/>
       <remap from="scan"  to="$(arg scan_topic)"/>
       <remap from="camera_info" to="depth/camera_info"/>
