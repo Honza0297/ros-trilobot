@@ -38,9 +38,10 @@ class MoveBridge:
             self.warned = True
 
         pubmsg = Vel()
-        pubmsg.x = min(msg.linear.x, 0.2)
-        pubmsg.y = min(msg.linear.y, 0.2)
-        pubmsg.theta = min(msg.angular.z, math.pi / 10)
+        pubmsg.x = msg.linear.x
+        pubmsg.y = 0 
+        pubmsg.theta = msg.angular.z
+        rospy.logwarn("Msg: {}".format(pubmsg))
         self.pub.publish(pubmsg)
 
     def priority_callback(self, msg):

@@ -212,9 +212,9 @@ class ChargingController():
                 rospy.loginfo("PREP")
                 self.prepare_for_charge_goal()
             elif self.state == STATE_FINAL_NAV:
-                self.state = STATE_FINISHED  #TODO DELETE
+                #self.state = STATE_FINISHED  #TODO DELETE
                 rospy.loginfo("FINAL APPROACHING")
-                #self.final_approaching()
+                self.final_approaching()
             elif self.state == STATE_CHARGING:
                 rospy.loginfo("CHARGING")
                 self.check_charging()
@@ -261,17 +261,12 @@ class ChargingController():
         self.charging_position.header.stamp = rospy.Time.now() # Need to pretend the goal is fresh
         goal.target_pose = self.charging_position
         self.client.send_goal(goal)
-        res = None
-        wait = None
-        while not wait:
-            wait = self.client.wait_for_result(rospy.Duration.from_sec(10.0))
-            if not wait: # Assuming action server is down
-                self.charging_position.header.stamp = rospy.Time.now() # Need to pretend the goal is fresh
-                goal.target_pose = self.charging_position
-                self.client.send_goal(goal)
-        else:
-            res = self.client.get_result()
-            rospy.loginfo("Result from move_base: {}".format(res))
+        wait = self.client.wait_for_result()
+        if not wait:
+            rospy.logerr("Action server not available!")
+            rospy.signal_shutdown("Action server not available!")
+        res = self.client.get_result()
+        rospy.loginfo("Result from move_base: {}".format(res))
         self.state = STATE_FINAL_NAV
 
     def wiggle(self):
